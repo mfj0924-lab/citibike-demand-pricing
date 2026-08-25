@@ -1,9 +1,11 @@
 """Tests for pricing analysis generator."""
 
 import os, sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.pricing.supply_demand_gap import (
-    estimate_available_bikes, estimate_available_docks,
+    estimate_available_bikes,
+    estimate_available_docks,
     calculate_pricing_multiplier,
 )
 
@@ -32,21 +34,27 @@ class TestPricingMultiplier:
 
     def test_balanced(self):
         m = calculate_pricing_multiplier(
-            bike_gap=5, dock_gap=5,
-            available_bikes=20, available_docks=20,
+            bike_gap=5,
+            dock_gap=5,
+            available_bikes=20,
+            available_docks=20,
         )
         assert m == 1.0
 
     def test_severe_shortage(self):
         m = calculate_pricing_multiplier(
-            bike_gap=-15, dock_gap=-15,
-            available_bikes=5, available_docks=5,
+            bike_gap=-15,
+            dock_gap=-15,
+            available_bikes=5,
+            available_docks=5,
         )
         assert m > 1.5
 
     def test_surplus_discount(self):
         m = calculate_pricing_multiplier(
-            bike_gap=20, dock_gap=20,
-            available_bikes=25, available_docks=25,
+            bike_gap=20,
+            dock_gap=20,
+            available_bikes=25,
+            available_docks=25,
         )
         assert m < 1.0

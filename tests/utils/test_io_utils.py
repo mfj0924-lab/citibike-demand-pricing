@@ -1,6 +1,7 @@
 """Tests for I/O utilities."""
 
 import os, sys, tempfile
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.utils.io_utils import save_pickle, load_pickle
 
@@ -31,6 +32,7 @@ class TestIOUtils:
 
     def test_save_pickle_creates_directory(self):
         import shutil
+
         tmpdir = tempfile.mkdtemp()
         nested = os.path.join(tmpdir, "a", "b", "test.pkl")
         try:

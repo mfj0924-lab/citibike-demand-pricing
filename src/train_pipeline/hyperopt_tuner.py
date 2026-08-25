@@ -26,7 +26,7 @@ from src.utils.io_utils import read_parquet
 class HyperoptConfig:
     silver_parquet: str = ""
     output_json: str = ""
-    max_evals: int = 20       # number of Hyperopt trials
+    max_evals: int = 20  # number of Hyperopt trials
     train_fraction: float = 0.8
     random_seed: int = 42
 
@@ -52,10 +52,18 @@ def run_hyperopt_tuning(
     df = read_parquet(spark, config.silver_parquet)
 
     # Feature columns
-    exclude = {"station_id", "event_hour", "bike_demand", "dock_demand",
-               "year", "capacity"}
+    exclude = {
+        "station_id",
+        "event_hour",
+        "bike_demand",
+        "dock_demand",
+        "year",
+        "capacity",
+    }
     numeric = {"int", "bigint", "double", "float"}
-    feature_cols = [c for c, t in df.dtypes if c not in exclude and any(n in t for n in numeric)]
+    feature_cols = [
+        c for c, t in df.dtypes if c not in exclude and any(n in t for n in numeric)
+    ]
 
     assembler = VectorAssembler(
         inputCols=feature_cols, outputCol="features", handleInvalid="skip"
@@ -73,7 +81,9 @@ def run_hyperopt_tuning(
     )
     train = train.cache()
     val = val.cache()
-    print(f"  Total sampled: {df_sample.count():,}  Train: {train.count():,}  Val: {val.count():,}  Features: {len(feature_cols)}")
+    print(
+        f"  Total sampled: {df_sample.count():,}  Train: {train.count():,}  Val: {val.count():,}  Features: {len(feature_cols)}"
+    )
 
     # Define search space
     if model_type == "rf":
@@ -144,15 +154,25 @@ def run_hyperopt_tuning(
         )
         r2 = r2_eval.evaluate(model.transform(val))
 
-        result = {**params, "rmse": rmse, "r2": r2, "time_s": elapsed, "trial": trial_num}
+        result = {
+            **params,
+            "rmse": rmse,
+            "r2": r2,
+            "time_s": elapsed,
+            "trial": trial_num,
+        }
         trial_results.append(result)
-        print(f"  Trial {trial_num:2d}  RMSE={rmse:.4f}  R2={r2:.4f}  {elapsed:.1f}s  "
-              f"params={json.dumps({k: v for k, v in params.items()}, default=str)}")
+        print(
+            f"  Trial {trial_num:2d}  RMSE={rmse:.4f}  R2={r2:.4f}  {elapsed:.1f}s  "
+            f"params={json.dumps({k: v for k, v in params.items()}, default=str)}"
+        )
 
         return {"loss": rmse, "status": STATUS_OK}
 
     # Run optimization
-    print(f"\n  Running Hyperopt ({config.max_evals} trials, {model_type}, {label_col})...")
+    print(
+        f"\n  Running Hyperopt ({config.max_evals} trials, {model_type}, {label_col})..."
+    )
     best = fmin(
         fn=objective,
         space=space,
@@ -162,9 +182,15 @@ def run_hyperopt_tuning(
         rstate=None,
     )
 
-    best_params = {k: int(v) if k in ["numTrees", "maxDepth", "maxBins",
-                 "minInstancesPerNode", "maxIter"] else float(v)
-                 for k, v in best.items()}
+    best_params = {
+        k: (
+            int(v)
+            if k
+            in ["numTrees", "maxDepth", "maxBins", "minInstancesPerNode", "maxIter"]
+            else float(v)
+        )
+        for k, v in best.items()
+    }
 
     best_trial = min(trial_results, key=lambda x: x["rmse"])
     print(f"\n  Best:  RMSE={best_trial['rmse']:.4f}  R2={best_trial['r2']:.4f}")
@@ -192,6 +218,7 @@ def run_hyperopt_tuning(
 
 if __name__ == "__main__":
     from config.spark_config import get_spark_session
+
     spark = get_spark_session("hyperopt", "5g")
     base = os.path.join(os.path.dirname(__file__), "..", "..")
 
@@ -205,7 +232,9 @@ if __name__ == "__main__":
             print(f"{'='*60}")
             config = HyperoptConfig(
                 silver_parquet=silver,
-                output_json=os.path.join(models_dir, f"hyperopt_{model_type}_{label}.json"),
+                output_json=os.path.join(
+                    models_dir, f"hyperopt_{model_type}_{label}.json"
+                ),
                 max_evals=8,
             )
             run_hyperopt_tuning(spark, config, model_type=model_type, label_col=label)

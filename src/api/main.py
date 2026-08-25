@@ -87,6 +87,7 @@ async def dashboard():
     """PyEcharts 数据可视化看板大屏"""
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
     from src.visualization.dashboard import render_dashboard
+
     return HTMLResponse(render_dashboard())
 
 
@@ -239,4 +240,8 @@ btn.textContent='查询预测 & 定价建议';
 @app.get("/health", tags=["页面"])
 async def health():
     """服务健康检查"""
-    return {"status": "ok", "service": "CitiBike Dynamic Pricing API", "version": "1.0.0"}
+    return {
+        "status": "ok",
+        "service": "CitiBike Dynamic Pricing API",
+        "version": "1.0.0",
+    }

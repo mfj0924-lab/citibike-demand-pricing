@@ -28,6 +28,7 @@ class DataIngestor:
     def _list_csv_paths(self) -> list:
         """List absolute paths of all CSV files in raw_dir (Python-side glob)."""
         import glob
+
         pattern = os.path.join(self.raw_dir, "*.csv")
         paths = glob.glob(pattern)
         if not paths:
@@ -42,8 +43,7 @@ class DataIngestor:
         print(f"  Found {len(csv_paths)} CSV files")
 
         df = (
-            self.spark.read
-            .option("header", "true")
+            self.spark.read.option("header", "true")
             .option("inferSchema", "true")
             .csv(csv_paths)
         )
@@ -53,8 +53,7 @@ class DataIngestor:
         """Add a file_name column extracted from the input file path."""
         df = df.withColumn("file_path", input_file_name())
         return df.withColumn(
-            "file_name",
-            regexp_extract("file_path", r"[^\\/]+$", 0)
+            "file_name", regexp_extract("file_path", r"[^\\/]+$", 0)
         ).drop("file_path")
 
     def run(self) -> None:

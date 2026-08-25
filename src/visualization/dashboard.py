@@ -18,7 +18,11 @@ import pandas as pd
 import numpy as np
 
 from pyecharts.charts import (
-    Pie, Line, Bar, Scatter, Page,
+    Pie,
+    Line,
+    Bar,
+    Scatter,
+    Page,
 )
 from pyecharts import options as opts
 from pyecharts.globals import ThemeType
@@ -40,18 +44,21 @@ def _generate_sample_data():
     np.random.seed(42)
     n = 500
     hours = np.tile(range(24), n // 24 + 1)[:n]
-    return pd.DataFrame({
-        "station_id": [f"{i:04d}" for i in range(n)],
-        "bike_demand": np.random.poisson(10, n),
-        "dock_demand": np.random.poisson(8, n),
-        "pricing_multiplier": np.clip(np.random.normal(1.0, 0.2, n), 0.7, 2.0),
-        "suggested_price": np.random.normal(4.5, 1.0, n),
-        "pricing_zone": np.random.choice(
-            ["Surge", "Mild Surge", "Normal", "Discount"], n,
-            p=[0.05, 0.10, 0.35, 0.50]
-        ),
-        "hour": hours,
-    })
+    return pd.DataFrame(
+        {
+            "station_id": [f"{i:04d}" for i in range(n)],
+            "bike_demand": np.random.poisson(10, n),
+            "dock_demand": np.random.poisson(8, n),
+            "pricing_multiplier": np.clip(np.random.normal(1.0, 0.2, n), 0.7, 2.0),
+            "suggested_price": np.random.normal(4.5, 1.0, n),
+            "pricing_zone": np.random.choice(
+                ["Surge", "Mild Surge", "Normal", "Discount"],
+                n,
+                p=[0.05, 0.10, 0.35, 0.50],
+            ),
+            "hour": hours,
+        }
+    )
 
 
 def chart_pricing_pie(pdf: pd.DataFrame) -> Pie:
@@ -60,7 +67,11 @@ def chart_pricing_pie(pdf: pd.DataFrame) -> Pie:
     data_pair = [(zone, int(count)) for zone, count in counts.items()]
 
     return (
-        Pie(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="500px", height="400px"))
+        Pie(
+            init_opts=opts.InitOpts(
+                theme=ThemeType.LIGHT, width="500px", height="400px"
+            )
+        )
         .add(
             series_name="定价区域",
             data_pair=data_pair,
@@ -68,7 +79,9 @@ def chart_pricing_pie(pdf: pd.DataFrame) -> Pie:
             label_opts=opts.LabelOpts(formatter="{b}: {c} ({d}%)"),
         )
         .set_global_opts(
-            title_opts=opts.TitleOpts(title="定价区域分布", subtitle="Surge / Normal / Discount"),
+            title_opts=opts.TitleOpts(
+                title="定价区域分布", subtitle="Surge / Normal / Discount"
+            ),
             legend_opts=opts.LegendOpts(orient="vertical", pos_right="5%"),
         )
         .set_colors(["#e74c3c", "#f39c12", "#3498db", "#2ecc71"])
@@ -80,28 +93,40 @@ def chart_hourly_demand(pdf: pd.DataFrame) -> Line:
     if "hour" not in pdf.columns:
         pdf["hour"] = pd.to_datetime(pdf["event_hour"]).dt.hour
 
-    hourly = pdf.groupby("hour").agg(
-        bike=("bike_demand", "mean"),
-        dock=("dock_demand", "mean"),
-    ).reset_index()
+    hourly = (
+        pdf.groupby("hour")
+        .agg(
+            bike=("bike_demand", "mean"),
+            dock=("dock_demand", "mean"),
+        )
+        .reset_index()
+    )
 
     return (
-        Line(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="700px", height="400px"))
+        Line(
+            init_opts=opts.InitOpts(
+                theme=ThemeType.LIGHT, width="700px", height="400px"
+            )
+        )
         .add_xaxis(hourly["hour"].astype(str).tolist())
         .add_yaxis(
-            "借车需求", hourly["bike"].round(1).tolist(),
+            "借车需求",
+            hourly["bike"].round(1).tolist(),
             is_smooth=True,
             label_opts=opts.LabelOpts(is_show=False),
             linestyle_opts=opts.LineStyleOpts(width=2),
         )
         .add_yaxis(
-            "还车需求", hourly["dock"].round(1).tolist(),
+            "还车需求",
+            hourly["dock"].round(1).tolist(),
             is_smooth=True,
             label_opts=opts.LabelOpts(is_show=False),
             linestyle_opts=opts.LineStyleOpts(width=2),
         )
         .set_global_opts(
-            title_opts=opts.TitleOpts(title="24小时需求模式", subtitle="按小时平均借车/还车量"),
+            title_opts=opts.TitleOpts(
+                title="24小时需求模式", subtitle="按小时平均借车/还车量"
+            ),
             xaxis_opts=opts.AxisOpts(name="小时"),
             yaxis_opts=opts.AxisOpts(name="平均需求（辆）"),
             tooltip_opts=opts.TooltipOpts(trigger="axis"),
@@ -126,12 +151,21 @@ def chart_feature_importance() -> Bar:
     ]
 
     return (
-        Bar(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="600px", height="400px"))
+        Bar(
+            init_opts=opts.InitOpts(
+                theme=ThemeType.LIGHT, width="600px", height="400px"
+            )
+        )
         .add_xaxis([f[0] for f in features])
-        .add_yaxis("特征重要度", [round(f[1], 3) for f in features],
-                    itemstyle_opts=opts.ItemStyleOpts(color="#3498db"))
+        .add_yaxis(
+            "特征重要度",
+            [round(f[1], 3) for f in features],
+            itemstyle_opts=opts.ItemStyleOpts(color="#3498db"),
+        )
         .set_global_opts(
-            title_opts=opts.TitleOpts(title="模型特征重要性", subtitle="Random Forest Top-10"),
+            title_opts=opts.TitleOpts(
+                title="模型特征重要性", subtitle="Random Forest Top-10"
+            ),
             xaxis_opts=opts.AxisOpts(axislabel_opts=opts.LabelOpts(rotate=45)),
             yaxis_opts=opts.AxisOpts(name="重要度"),
         )
@@ -143,16 +177,36 @@ def chart_price_histogram(pdf: pd.DataFrame) -> Bar:
     """Bar chart: suggested price distribution."""
     prices = pdf["suggested_price"].dropna()
     bins = [0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 7.0, 10.0]
-    labels = ["<2.5", "2.5-3", "3-3.5", "3.5-4", "4-4.5", "4.5-5", "5-5.5", "5.5-6", "6-7", ">7"]
+    labels = [
+        "<2.5",
+        "2.5-3",
+        "3-3.5",
+        "3.5-4",
+        "4-4.5",
+        "4.5-5",
+        "5-5.5",
+        "5.5-6",
+        "6-7",
+        ">7",
+    ]
     counts = pd.cut(prices, bins=bins).value_counts().sort_index()
 
     return (
-        Bar(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="600px", height="400px"))
+        Bar(
+            init_opts=opts.InitOpts(
+                theme=ThemeType.LIGHT, width="600px", height="400px"
+            )
+        )
         .add_xaxis(labels)
-        .add_yaxis("站点-小时数", counts.tolist(),
-                    itemstyle_opts=opts.ItemStyleOpts(color="#27ae60"))
+        .add_yaxis(
+            "站点-小时数",
+            counts.tolist(),
+            itemstyle_opts=opts.ItemStyleOpts(color="#27ae60"),
+        )
         .set_global_opts(
-            title_opts=opts.TitleOpts(title="建议价格分布", subtitle="各站点×小时的定价频率"),
+            title_opts=opts.TitleOpts(
+                title="建议价格分布", subtitle="各站点×小时的定价频率"
+            ),
             xaxis_opts=opts.AxisOpts(name="建议价格 (USD)"),
             yaxis_opts=opts.AxisOpts(name="记录数"),
         )
@@ -164,8 +218,12 @@ def chart_demand_scatter(pdf: pd.DataFrame) -> Scatter:
     # Sample 2000 points for performance
     sample = pdf.sample(n=min(2000, len(pdf)), random_state=42)
 
-    color_map = {"Surge": "#e74c3c", "Mild Surge": "#f39c12",
-                 "Normal": "#3498db", "Discount": "#2ecc71"}
+    color_map = {
+        "Surge": "#e74c3c",
+        "Mild Surge": "#f39c12",
+        "Normal": "#3498db",
+        "Discount": "#2ecc71",
+    }
 
     zones = sample["pricing_zone"].unique()
     scatter = Scatter(
@@ -177,16 +235,20 @@ def chart_demand_scatter(pdf: pd.DataFrame) -> Scatter:
         subset = sample[sample["pricing_zone"] == zone]
         scatter.add_yaxis(
             zone,
-            list(zip(
-                subset["bike_demand"].clip(0, 80).tolist(),
-                subset["dock_demand"].clip(0, 80).tolist(),
-            )),
+            list(
+                zip(
+                    subset["bike_demand"].clip(0, 80).tolist(),
+                    subset["dock_demand"].clip(0, 80).tolist(),
+                )
+            ),
             symbol_size=6,
             label_opts=opts.LabelOpts(is_show=False),
         )
 
     scatter.set_global_opts(
-        title_opts=opts.TitleOpts(title="借车 vs 还车需求分布", subtitle="按定价区域着色"),
+        title_opts=opts.TitleOpts(
+            title="借车 vs 还车需求分布", subtitle="按定价区域着色"
+        ),
         xaxis_opts=opts.AxisOpts(name="借车需求", type_="value", min_=0),
         yaxis_opts=opts.AxisOpts(name="还车需求", type_="value", min_=0),
         tooltip_opts=opts.TooltipOpts(formatter="Bike: {@[0]} Dock: {@[1]}"),
@@ -196,20 +258,33 @@ def chart_demand_scatter(pdf: pd.DataFrame) -> Scatter:
 
 def chart_top_surge_stations(pdf: pd.DataFrame) -> Bar:
     """Bar chart: top-10 surge stations by average multiplier."""
-    station_agg = pdf.groupby("station_id").agg(
-        avg_price=("suggested_price", "mean"),
-        avg_multiplier=("pricing_multiplier", "mean"),
-    ).reset_index()
+    station_agg = (
+        pdf.groupby("station_id")
+        .agg(
+            avg_price=("suggested_price", "mean"),
+            avg_multiplier=("pricing_multiplier", "mean"),
+        )
+        .reset_index()
+    )
 
     top10 = station_agg.nlargest(10, "avg_multiplier")
 
     return (
-        Bar(init_opts=opts.InitOpts(theme=ThemeType.LIGHT, width="600px", height="500px"))
+        Bar(
+            init_opts=opts.InitOpts(
+                theme=ThemeType.LIGHT, width="600px", height="500px"
+            )
+        )
         .add_xaxis(top10["station_id"].tolist())
-        .add_yaxis("平均定价乘数", top10["avg_multiplier"].round(2).tolist(),
-                    itemstyle_opts=opts.ItemStyleOpts(color="#e74c3c"))
+        .add_yaxis(
+            "平均定价乘数",
+            top10["avg_multiplier"].round(2).tolist(),
+            itemstyle_opts=opts.ItemStyleOpts(color="#e74c3c"),
+        )
         .set_global_opts(
-            title_opts=opts.TitleOpts(title="Top-10 高频涨价站点", subtitle="按平均定价乘数排序"),
+            title_opts=opts.TitleOpts(
+                title="Top-10 高频涨价站点", subtitle="按平均定价乘数排序"
+            ),
             xaxis_opts=opts.AxisOpts(name="站点ID"),
             yaxis_opts=opts.AxisOpts(name="平均定价乘数"),
         )

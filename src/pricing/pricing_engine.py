@@ -24,15 +24,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 class PricingZone(Enum):
-    SURGE = "Surge"           # 1.2x - 2.0x
-    MILD_SURGE = "Mild Surge" # 1.0x - 1.2x
-    NORMAL = "Normal"         # ~1.0x
-    DISCOUNT = "Discount"     # 0.7x - 0.9x
+    SURGE = "Surge"  # 1.2x - 2.0x
+    MILD_SURGE = "Mild Surge"  # 1.0x - 1.2x
+    NORMAL = "Normal"  # ~1.0x
+    DISCOUNT = "Discount"  # 0.7x - 0.9x
 
 
 @dataclass
 class PricingResult:
     """Pricing decision for a single station-hour."""
+
     station_id: str
     timestamp: str
     predicted_bike_demand: float
@@ -92,8 +93,10 @@ class DynamicPricingEngine:
 
         # Determine pricing zone and multiplier
         multiplier, zone, reason = self._determine_pricing(
-            bike_gap, dock_gap,
-            available_bikes_now, available_docks_now,
+            bike_gap,
+            dock_gap,
+            available_bikes_now,
+            available_docks_now,
         )
 
         return PricingResult(
@@ -266,9 +269,13 @@ if __name__ == "__main__":
             available_docks_now=docks,
         )
         print(f"\n  [{label}]")
-        print(f"    Demand: bikes={bd}, docks={dd}  |  "
-              f"Available: bikes={bikes}, docks={docks}")
+        print(
+            f"    Demand: bikes={bd}, docks={dd}  |  "
+            f"Available: bikes={bikes}, docks={docks}"
+        )
         print(f"    Gaps: bike={result.bike_gap:+d}, dock={result.dock_gap:+d}")
-        print(f"    → {result.pricing_zone.value}: "
-              f"{result.pricing_multiplier:.2f}x → ${result.suggested_price_usd:.2f}")
+        print(
+            f"    → {result.pricing_zone.value}: "
+            f"{result.pricing_multiplier:.2f}x → ${result.suggested_price_usd:.2f}"
+        )
         print(f"    Reason: {result.reason}")

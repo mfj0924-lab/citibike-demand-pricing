@@ -25,15 +25,39 @@ from src.utils.io_utils import read_parquet, write_parquet
 from src.utils.logger import logging  # noqa: F401
 
 _US_HOLIDAYS: List[str] = [
-    "2025-01-01", "2025-01-20", "2025-02-17", "2025-05-26",
-    "2025-06-19", "2025-07-04", "2025-09-01", "2025-10-13",
-    "2025-11-11", "2025-11-27", "2025-12-25",
-    "2026-01-01", "2026-01-19", "2026-02-16", "2026-05-25",
-    "2026-06-19", "2026-07-04", "2026-09-07", "2026-10-12",
-    "2026-11-11", "2026-11-26", "2026-12-25",
-    "2027-01-01", "2027-01-18", "2027-02-15", "2027-05-31",
-    "2027-06-19", "2027-07-04", "2027-09-06", "2027-10-11",
-    "2027-11-11", "2027-11-25", "2027-12-25",
+    "2025-01-01",
+    "2025-01-20",
+    "2025-02-17",
+    "2025-05-26",
+    "2025-06-19",
+    "2025-07-04",
+    "2025-09-01",
+    "2025-10-13",
+    "2025-11-11",
+    "2025-11-27",
+    "2025-12-25",
+    "2026-01-01",
+    "2026-01-19",
+    "2026-02-16",
+    "2026-05-25",
+    "2026-06-19",
+    "2026-07-04",
+    "2026-09-07",
+    "2026-10-12",
+    "2026-11-11",
+    "2026-11-26",
+    "2026-12-25",
+    "2027-01-01",
+    "2027-01-18",
+    "2027-02-15",
+    "2027-05-31",
+    "2027-06-19",
+    "2027-07-04",
+    "2027-09-06",
+    "2027-10-11",
+    "2027-11-11",
+    "2027-11-25",
+    "2027-12-25",
 ]
 
 
@@ -56,9 +80,11 @@ class BronzeToSilverTransformer(AbstractTransformer):
 
     def _build_capacity_broadcast(self):
         """Match bronze stations to GBFS stations by lat/lng, return broadcast dict."""
-        stations_pd = read_parquet(
-            self.spark, self.config.stations_parquet
-        ).select("station_id", "latitude", "longitude").toPandas()
+        stations_pd = (
+            read_parquet(self.spark, self.config.stations_parquet)
+            .select("station_id", "latitude", "longitude")
+            .toPandas()
+        )
 
         cap_map = match_stations_from_dataframe(
             stations_pd, self.config.station_info_json, max_distance_m=100.0
@@ -115,8 +141,7 @@ class BronzeToSilverTransformer(AbstractTransformer):
     def _aggregate_hourly(self, events: DataFrame) -> DataFrame:
         """Group by (station_id, event_hour) with all features."""
         hourly = (
-            events
-            .withColumn("event_hour", F.date_trunc("hour", col("event_time")))
+            events.withColumn("event_hour", F.date_trunc("hour", col("event_time")))
             .groupBy("station_id", "event_hour")
             .agg(
                 F.sum("bike_departure").alias("bike_demand"),
@@ -129,14 +154,28 @@ class BronzeToSilverTransformer(AbstractTransformer):
         )
         # Compute ratios
         hourly = (
-            hourly
-            .withColumn("electric_ratio", F.when(col("bike_demand") > 0,
-                col("electric_count") / col("bike_demand")).otherwise(0))
-            .withColumn("member_ratio", F.when(col("bike_demand") > 0,
-                col("member_count") / col("bike_demand")).otherwise(0))
-            .withColumn("avg_trip_duration_min", F.when(col("bike_demand") > 0,
-                col("total_duration_sec") / col("bike_demand") / 60.0).otherwise(0))
-            .drop("electric_count", "member_count", "total_duration_sec", "total_events")
+            hourly.withColumn(
+                "electric_ratio",
+                F.when(
+                    col("bike_demand") > 0, col("electric_count") / col("bike_demand")
+                ).otherwise(0),
+            )
+            .withColumn(
+                "member_ratio",
+                F.when(
+                    col("bike_demand") > 0, col("member_count") / col("bike_demand")
+                ).otherwise(0),
+            )
+            .withColumn(
+                "avg_trip_duration_min",
+                F.when(
+                    col("bike_demand") > 0,
+                    col("total_duration_sec") / col("bike_demand") / 60.0,
+                ).otherwise(0),
+            )
+            .drop(
+                "electric_count", "member_count", "total_duration_sec", "total_events"
+            )
         )
         return hourly
 
@@ -144,26 +183,29 @@ class BronzeToSilverTransformer(AbstractTransformer):
 
     def _add_time_features(self, df: DataFrame) -> DataFrame:
         return (
-            df
-            .withColumn("year", F.year("event_hour"))
+            df.withColumn("year", F.year("event_hour"))
             .withColumn("month", F.month("event_hour"))
             .withColumn("day", F.dayofmonth("event_hour"))
             .withColumn("weekday", F.dayofweek("event_hour"))
             .withColumn("weekofyear", F.weekofyear("event_hour"))
             .withColumn("dayofyear", F.dayofyear("event_hour"))
             .withColumn("hour", F.hour("event_hour"))
-            .withColumn("is_weekend", F.when(col("weekday").isin([1, 7]), 1).otherwise(0))
-            .withColumn("is_rush_hour", F.when(
-                (col("hour").between(7, 9)) | (col("hour").between(17, 19)), 1
-            ).otherwise(0))
+            .withColumn(
+                "is_weekend", F.when(col("weekday").isin([1, 7]), 1).otherwise(0)
+            )
+            .withColumn(
+                "is_rush_hour",
+                F.when(
+                    (col("hour").between(7, 9)) | (col("hour").between(17, 19)), 1
+                ).otherwise(0),
+            )
         )
 
     @staticmethod
     def _cyclic_encode(df: DataFrame, col_name: str, period: int) -> DataFrame:
         rad = 2.0 * 3.141592653589793 * F.col(col_name) / period
-        return (
-            df.withColumn(f"{col_name}_sin", F.sin(rad))
-            .withColumn(f"{col_name}_cos", F.cos(rad))
+        return df.withColumn(f"{col_name}_sin", F.sin(rad)).withColumn(
+            f"{col_name}_cos", F.cos(rad)
         )
 
     def _add_holiday_flag(self, df: DataFrame) -> DataFrame:
@@ -172,7 +214,9 @@ class BronzeToSilverTransformer(AbstractTransformer):
         )
         return (
             df.withColumn("event_date_str", F.date_format("event_hour", "yyyy-MM-dd"))
-            .join(holiday_df, F.col("event_date_str") == F.col("holiday_date"), how="left")
+            .join(
+                holiday_df, F.col("event_date_str") == F.col("holiday_date"), how="left"
+            )
             .fillna({"is_holiday": 0})
             .drop("event_date_str", "holiday_date")
         )
@@ -187,12 +231,14 @@ class BronzeToSilverTransformer(AbstractTransformer):
             return df
 
         weather_pd = pd.read_csv(wpath, skiprows=3)  # skip Open-Meteo header
-        weather_pd = weather_pd.rename(columns={
-            "time": "date",
-            "temperature_2m_mean (°C)": "temp_c",
-            "precipitation_sum (mm)": "precip_mm",
-            "wind_speed_10m_max (km/h)": "wind_kmh",
-        })
+        weather_pd = weather_pd.rename(
+            columns={
+                "time": "date",
+                "temperature_2m_mean (°C)": "temp_c",
+                "precipitation_sum (mm)": "precip_mm",
+                "wind_speed_10m_max (km/h)": "wind_kmh",
+            }
+        )
         # Only keep date + weather columns
         weather_pd = weather_pd[["date", "temp_c", "precip_mm", "wind_kmh"]]
         print(f"  Weather rows: {len(weather_pd):,}")
@@ -201,8 +247,10 @@ class BronzeToSilverTransformer(AbstractTransformer):
         df = df.withColumn("event_date", F.to_date("event_hour"))
         df = df.join(weather, df.event_date == weather.date, how="left")
         missing = df.filter(F.col("temp_c").isNull()).count()
-        print(f"  Weather matched: {df.count() - missing:,} / {df.count():,} rows, "
-              f"{missing:,} missing")
+        print(
+            f"  Weather matched: {df.count() - missing:,} / {df.count():,} rows, "
+            f"{missing:,} missing"
+        )
         return df.drop("event_date", "date")
 
     # ── Main ──────────────────────────────────────────────

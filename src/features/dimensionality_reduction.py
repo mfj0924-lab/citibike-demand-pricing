@@ -41,7 +41,14 @@ class DimensionalityReducer:
     @staticmethod
     def _numeric_feature_cols(df) -> List[str]:
         """Return numeric feature column names (excluding IDs and targets)."""
-        exclude = {"station_id", "event_hour", "bike_demand", "dock_demand", "year", "capacity"}
+        exclude = {
+            "station_id",
+            "event_hour",
+            "bike_demand",
+            "dock_demand",
+            "year",
+            "capacity",
+        }
         numeric_types = {"int", "bigint", "double", "float"}
         cols = []
         for c, t in df.dtypes:
@@ -66,8 +73,10 @@ class DimensionalityReducer:
             inputCols=feature_cols, outputCol="raw_features", handleInvalid="skip"
         )
         scaler = StandardScaler(
-            inputCol="raw_features", outputCol="scaled_features",
-            withStd=True, withMean=True,
+            inputCol="raw_features",
+            outputCol="scaled_features",
+            withStd=True,
+            withMean=True,
         )
         df = assembler.transform(df)
         scaler_model = scaler.fit(df)
@@ -101,29 +110,41 @@ class DimensionalityReducer:
 
         # Stratified sample: ensure spread across hours
         sample = df.sample(
-            fraction=self.cfg.tsne_sample_n / df.count() * 2,  # oversample then truncate
+            fraction=self.cfg.tsne_sample_n
+            / df.count()
+            * 2,  # oversample then truncate
             seed=self.cfg.random_seed,
         ).limit(self.cfg.tsne_sample_n)
 
         # Collect to pandas
-        pdf = sample.select(*feature_cols, "bike_demand", "dock_demand", "hour").toPandas()
+        pdf = sample.select(
+            *feature_cols, "bike_demand", "dock_demand", "hour"
+        ).toPandas()
         # Drop duplicate columns (hour appears in both feature_cols and explicit select)
         pdf = pdf.loc[:, ~pdf.columns.duplicated()]
         print(f"  t-SNE sample: {len(pdf):,} rows")
 
         # Scale
         from sklearn.preprocessing import StandardScaler
+
         X = StandardScaler().fit_transform(pdf[feature_cols].values)
 
         # t-SNE
         tsne = TSNE(
-            n_components=2, perplexity=self.cfg.tsne_perplexity,
-            random_state=self.cfg.random_seed, n_jobs=-1, verbose=0,
+            n_components=2,
+            perplexity=self.cfg.tsne_perplexity,
+            random_state=self.cfg.random_seed,
+            n_jobs=-1,
+            verbose=0,
         )
         X_2d = tsne.fit_transform(X)
         print(f"  t-SNE done. KL divergence: {tsne.kl_divergence_:.2f}")
 
-        return X_2d, pdf["bike_demand"].values + pdf["dock_demand"].values, pdf["hour"].values
+        return (
+            X_2d,
+            pdf["bike_demand"].values + pdf["dock_demand"].values,
+            pdf["hour"].values,
+        )
 
 
 if __name__ == "__main__":
@@ -131,7 +152,9 @@ if __name__ == "__main__":
     base = os.path.join(os.path.dirname(__file__), "..", "..")
 
     cfg = DimReductionConfig(
-        silver_parquet=os.path.join(base, "data", "processed", "silver", "hourly_demand.parquet"),
+        silver_parquet=os.path.join(
+            base, "data", "processed", "silver", "hourly_demand.parquet"
+        ),
         pca_k=5,
         tsne_sample_n=50000,
     )
@@ -155,12 +178,14 @@ if __name__ == "__main__":
     tsne_xy, total_demand, hours = reducer.run_tsne()
 
     # Save t-SNE results for visualization
-    tsne_df = pd.DataFrame({
-        "tsne_x": tsne_xy[:, 0].ravel(),
-        "tsne_y": tsne_xy[:, 1].ravel(),
-        "total_demand": total_demand,
-        "hour": hours,
-    })
+    tsne_df = pd.DataFrame(
+        {
+            "tsne_x": tsne_xy[:, 0].ravel(),
+            "tsne_y": tsne_xy[:, 1].ravel(),
+            "total_demand": total_demand,
+            "hour": hours,
+        }
+    )
     tsne_path = os.path.join(base, "data", "processed", "tsne_results.csv")
     tsne_df.to_csv(tsne_path, index=False)
     print(f"  t-SNE results saved to {tsne_path}")

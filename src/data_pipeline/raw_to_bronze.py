@@ -37,11 +37,9 @@ class RawToBronzeTransformer(AbstractTransformer):
 
     def _fix_timestamps(self, df: DataFrame) -> DataFrame:
         """Convert started_at / ended_at strings to timestamps."""
-        return (
-            df
-            .withColumn("started_at", to_timestamp("started_at", "yyyy-MM-dd HH:mm:ss.SSS"))
-            .withColumn("ended_at", to_timestamp("ended_at", "yyyy-MM-dd HH:mm:ss.SSS"))
-        )
+        return df.withColumn(
+            "started_at", to_timestamp("started_at", "yyyy-MM-dd HH:mm:ss.SSS")
+        ).withColumn("ended_at", to_timestamp("ended_at", "yyyy-MM-dd HH:mm:ss.SSS"))
 
     def _drop_duplicate_ride_ids(self, df: DataFrame) -> DataFrame:
         """Keep the first occurrence of each ride_id."""
@@ -53,21 +51,17 @@ class RawToBronzeTransformer(AbstractTransformer):
         Collects station info from both start and end columns, groups by
         station_id to get one row per unique station.
         """
-        start_stations = (
-            df.select(
-                col("start_station_id").alias("station_id"),
-                col("start_station_name").alias("name"),
-                col("start_lat").alias("latitude"),
-                col("start_lng").alias("longitude"),
-            )
+        start_stations = df.select(
+            col("start_station_id").alias("station_id"),
+            col("start_station_name").alias("name"),
+            col("start_lat").alias("latitude"),
+            col("start_lng").alias("longitude"),
         )
-        end_stations = (
-            df.select(
-                col("end_station_id").alias("station_id"),
-                col("end_station_name").alias("name"),
-                col("end_lat").alias("latitude"),
-                col("end_lng").alias("longitude"),
-            )
+        end_stations = df.select(
+            col("end_station_id").alias("station_id"),
+            col("end_station_name").alias("name"),
+            col("end_lat").alias("latitude"),
+            col("end_lng").alias("longitude"),
         )
         all_stations = start_stations.union(end_stations)
 
@@ -82,8 +76,12 @@ class RawToBronzeTransformer(AbstractTransformer):
     def _strip_station_cols_from_trips(self, df: DataFrame) -> DataFrame:
         """Remove station name/lat/lng columns, keep only station IDs."""
         return df.drop(
-            "start_station_name", "end_station_name",
-            "start_lat", "start_lng", "end_lat", "end_lng",
+            "start_station_name",
+            "end_station_name",
+            "start_lat",
+            "start_lng",
+            "end_lat",
+            "end_lng",
         )
 
     def transform(self):

@@ -103,9 +103,7 @@ def generate_pricing_analysis(
     df = read_parquet(spark, silver_parquet)
 
     # Select needed columns
-    cols_needed = [
-        "station_id", "event_hour", "bike_demand", "dock_demand", "capacity"
-    ]
+    cols_needed = ["station_id", "event_hour", "bike_demand", "dock_demand", "capacity"]
     pdf = df.select(*cols_needed).toPandas()
     spark.stop()
 
@@ -121,13 +119,17 @@ def generate_pricing_analysis(
     multipliers = []
     for _, row in pdf.iterrows():
         m = calculate_pricing_multiplier(
-            row["bike_gap"], row["dock_gap"],
-            row["available_bikes"], row["available_docks"],
+            row["bike_gap"],
+            row["dock_gap"],
+            row["available_bikes"],
+            row["available_docks"],
         )
         multipliers.append(m)
 
     pdf["pricing_multiplier"] = multipliers
-    pdf["suggested_price"] = (pdf["pricing_multiplier"] * 4.49).round(2)  # CitiBike e-bike base price
+    pdf["suggested_price"] = (pdf["pricing_multiplier"] * 4.49).round(
+        2
+    )  # CitiBike e-bike base price
 
     # Classify pricing zone
     conditions = [
@@ -157,7 +159,8 @@ if __name__ == "__main__":
     base = os.path.join(os.path.dirname(__file__), "..", "..")
 
     pdf = generate_pricing_analysis(
-        silver_parquet=os.path.join(base, "data", "processed", "silver",
-                                     "hourly_demand.parquet"),
+        silver_parquet=os.path.join(
+            base, "data", "processed", "silver", "hourly_demand.parquet"
+        ),
         output_csv=os.path.join(base, "data", "processed", "pricing_analysis.csv"),
     )

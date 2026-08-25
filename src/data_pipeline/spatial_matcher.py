@@ -18,10 +18,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
     """Haversine distance between two lat/lng points in kilometers."""
     from math import radians, sin, cos, sqrt, asin
+
     R = 6371.0
     dlat = radians(lat2 - lat1)
     dlng = radians(lng2 - lng1)
-    a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng/2)**2
+    a = (
+        sin(dlat / 2) ** 2
+        + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlng / 2) ** 2
+    )
     return R * 2 * asin(sqrt(a)) * 1000  # return meters
 
 
@@ -119,6 +123,8 @@ def match_stations_from_dataframe(
         capacity_map[str(station_id)] = 0
 
     match_rate = matched / len(bronze_stations_df) if len(bronze_stations_df) > 0 else 0
-    print(f"  Station capacity match: {matched}/{len(bronze_stations_df)} ({match_rate:.1%})")
+    print(
+        f"  Station capacity match: {matched}/{len(bronze_stations_df)} ({match_rate:.1%})"
+    )
     print(f"  Non-zero capacities: {sum(1 for v in capacity_map.values() if v > 0)}")
     return capacity_map

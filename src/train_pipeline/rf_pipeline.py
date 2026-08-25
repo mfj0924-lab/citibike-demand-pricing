@@ -30,6 +30,7 @@ class RFPipeline(AbstractPipeline):
 
     def get_search_space(self) -> Dict[str, Any]:
         from hyperopt import hp
+
         return {
             "numTrees": hp.quniform("numTrees", 20, 150, 10),
             "maxDepth": hp.quniform("maxDepth", 5, 25, 1),
@@ -38,7 +39,9 @@ class RFPipeline(AbstractPipeline):
             "subsamplingRate": hp.uniform("subsamplingRate", 0.5, 1.0),
         }
 
-    def get_regressor(self, label_name: str, predict_name: str, params: Dict[str, Any] = None):
+    def get_regressor(
+        self, label_name: str, predict_name: str, params: Dict[str, Any] = None
+    ):
         if params is None:
             params = {}
         return RandomForestRegressor(
@@ -49,8 +52,12 @@ class RFPipeline(AbstractPipeline):
             numTrees=int(params.get("numTrees", self.cfg.num_trees)),
             maxDepth=int(params.get("maxDepth", self.cfg.max_depth)),
             maxBins=int(params.get("maxBins", self.cfg.max_bins)),
-            minInstancesPerNode=int(params.get("minInstancesPerNode", self.cfg.min_instances_per_node)),
-            subsamplingRate=float(params.get("subsamplingRate", self.cfg.subsampling_rate)),
+            minInstancesPerNode=int(
+                params.get("minInstancesPerNode", self.cfg.min_instances_per_node)
+            ),
+            subsamplingRate=float(
+                params.get("subsamplingRate", self.cfg.subsampling_rate)
+            ),
         )
 
 
@@ -59,7 +66,9 @@ if __name__ == "__main__":
     base = os.path.join(os.path.dirname(__file__), "..", "..")
 
     config = RFPipelineConfig(
-        silver_parquet=os.path.join(base, "data", "processed", "silver", "hourly_demand.parquet"),
+        silver_parquet=os.path.join(
+            base, "data", "processed", "silver", "hourly_demand.parquet"
+        ),
         model_artifact_path=os.path.join(base, "models", "rf"),
     )
 

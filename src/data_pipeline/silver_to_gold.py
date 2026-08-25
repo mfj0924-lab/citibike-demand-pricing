@@ -12,7 +12,9 @@ from typing import List
 
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import (
-    VectorAssembler, StandardScaler, PCA,
+    VectorAssembler,
+    StandardScaler,
+    PCA,
 )
 from pyspark.sql import DataFrame, SparkSession
 
@@ -40,7 +42,10 @@ class SilverToGoldTransformer(AbstractTransformer):
     def _get_feature_cols(self, df: DataFrame) -> List[str]:
         """Return the list of numeric feature columns to use."""
         exclude = {
-            "station_id", "event_hour", "bike_demand", "dock_demand",
+            "station_id",
+            "event_hour",
+            "bike_demand",
+            "dock_demand",
             "year",  # leave year as a feature
         }
         # Prefer numeric columns only
@@ -83,9 +88,7 @@ class SilverToGoldTransformer(AbstractTransformer):
 
         return stages
 
-    def _apply_pipeline(
-        self, df: DataFrame, stages: List
-    ) -> DataFrame:
+    def _apply_pipeline(self, df: DataFrame, stages: List) -> DataFrame:
         """Fit and transform using the pipeline, save the model."""
         pipeline = Pipeline(stages=stages)
         model = pipeline.fit(df)
@@ -123,7 +126,13 @@ class SilverToGoldTransformer(AbstractTransformer):
 
         # Keep final training columns
         feature_out = f"pca_features" if cfg.pca_k > 0 else "scaled_features"
-        keep_cols = ["station_id", "event_hour", feature_out, "bike_demand", "dock_demand"]
+        keep_cols = [
+            "station_id",
+            "event_hour",
+            feature_out,
+            "bike_demand",
+            "dock_demand",
+        ]
         df_out = df.select(*[c for c in keep_cols if c in df.columns])
 
         write_parquet(df_out, cfg.gold_features_parquet)

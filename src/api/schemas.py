@@ -6,8 +6,9 @@ from pydantic import BaseModel, Field
 class PredictionRequest(BaseModel):
     station_id: str = Field(..., example="6535.04", description="CitiBike 站点编号")
     timestamp: str = Field(
-        ..., example="2026-06-15 08:00",
-        description="预测时间点，格式 'yyyy-MM-dd HH:mm'"
+        ...,
+        example="2026-06-15 08:00",
+        description="预测时间点，格式 'yyyy-MM-dd HH:mm'",
     )
     is_holiday: bool = Field(False, description="该日期是否是美国联邦假日")
     available_bikes: int = Field(15, description="站点当前可用车辆数")
@@ -20,9 +21,14 @@ class PredictionResponse(BaseModel):
     timestamp: str = Field(..., description="预测的时间点")
     predicted_bike_demand: float = Field(..., description="预测借出量（辆）")
     predicted_dock_demand: float = Field(..., description="预测还入量（辆）")
-    pricing_multiplier: float = Field(..., description="定价乘数（1.0=原价, >1.0=涨价, <1.0=降价）")
+    pricing_multiplier: float = Field(
+        ..., description="定价乘数（1.0=原价, >1.0=涨价, <1.0=降价）"
+    )
     suggested_price_usd: float = Field(..., description="建议价格（美元）")
-    pricing_zone: str = Field(..., description="定价区域：Surge(涨价)/Mild Surge(温和涨价)/Normal(原价)/Discount(降价)")
+    pricing_zone: str = Field(
+        ...,
+        description="定价区域：Surge(涨价)/Mild Surge(温和涨价)/Normal(原价)/Discount(降价)",
+    )
     reason: str = Field(..., description="定价决策的文字说明")
 
 
@@ -57,4 +63,6 @@ class HotspotItem(BaseModel):
 
 class HotspotResponse(BaseModel):
     surge_stations: list[HotspotItem] = Field(..., description="需要涨价的前 5 个站点")
-    discount_stations: list[HotspotItem] = Field(..., description="需要降价的前 5 个站点")
+    discount_stations: list[HotspotItem] = Field(
+        ..., description="需要降价的前 5 个站点"
+    )

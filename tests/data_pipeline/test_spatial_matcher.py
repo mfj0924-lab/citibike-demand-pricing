@@ -1,9 +1,11 @@
 """Tests for spatial station matcher."""
 
 import os, sys, json, tempfile
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from src.data_pipeline.spatial_matcher import (
-    match_stations_from_dataframe, haversine_km,
+    match_stations_from_dataframe,
+    haversine_km,
 )
 
 
@@ -33,8 +35,20 @@ class TestSpatialMatcher:
         gbfs = {
             "data": {
                 "stations": [
-                    {"station_id": "uuid-1", "lat": 40.73, "lon": -73.99, "capacity": 42, "name": "Station A"},
-                    {"station_id": "uuid-2", "lat": 40.75, "lon": -73.95, "capacity": 30, "name": "Station B"},
+                    {
+                        "station_id": "uuid-1",
+                        "lat": 40.73,
+                        "lon": -73.99,
+                        "capacity": 42,
+                        "name": "Station A",
+                    },
+                    {
+                        "station_id": "uuid-2",
+                        "lat": 40.75,
+                        "lon": -73.95,
+                        "capacity": 30,
+                        "name": "Station B",
+                    },
                 ]
             }
         }
@@ -43,13 +57,17 @@ class TestSpatialMatcher:
             json_path = f.name
 
         try:
-            bronze = pd.DataFrame({
-                "station_id": ["s1", "s2"],
-                "latitude": [40.73, 40.75],
-                "longitude": [-73.99, -73.95],
-            })
+            bronze = pd.DataFrame(
+                {
+                    "station_id": ["s1", "s2"],
+                    "latitude": [40.73, 40.75],
+                    "longitude": [-73.99, -73.95],
+                }
+            )
 
-            cap_map = match_stations_from_dataframe(bronze, json_path, max_distance_m=200.0)
+            cap_map = match_stations_from_dataframe(
+                bronze, json_path, max_distance_m=200.0
+            )
 
             assert cap_map["s1"] == 42
             assert cap_map["s2"] == 30
@@ -63,7 +81,13 @@ class TestSpatialMatcher:
         gbfs = {
             "data": {
                 "stations": [
-                    {"station_id": "uuid-1", "lat": 40.73, "lon": -73.99, "capacity": 42, "name": "A"},
+                    {
+                        "station_id": "uuid-1",
+                        "lat": 40.73,
+                        "lon": -73.99,
+                        "capacity": 42,
+                        "name": "A",
+                    },
                 ]
             }
         }
@@ -72,13 +96,17 @@ class TestSpatialMatcher:
             json_path = f.name
 
         try:
-            bronze = pd.DataFrame({
-                "station_id": ["far_station"],
-                "latitude": [34.05],  # Los Angeles — 4000 km away
-                "longitude": [-118.24],
-            })
+            bronze = pd.DataFrame(
+                {
+                    "station_id": ["far_station"],
+                    "latitude": [34.05],  # Los Angeles — 4000 km away
+                    "longitude": [-118.24],
+                }
+            )
 
-            cap_map = match_stations_from_dataframe(bronze, json_path, max_distance_m=200.0)
+            cap_map = match_stations_from_dataframe(
+                bronze, json_path, max_distance_m=200.0
+            )
 
             assert cap_map["far_station"] == 0
         finally:

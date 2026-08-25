@@ -42,10 +42,21 @@ class AbstractPipeline:
 
     @staticmethod
     def _numeric_feature_cols(df) -> List[str]:
-        exclude = {"station_id", "event_hour", "bike_demand", "dock_demand",
-                   "year", "capacity", "pca_features", "scaled_features", "raw_features"}
+        exclude = {
+            "station_id",
+            "event_hour",
+            "bike_demand",
+            "dock_demand",
+            "year",
+            "capacity",
+            "pca_features",
+            "scaled_features",
+            "raw_features",
+        }
         numeric = {"int", "bigint", "double", "float"}
-        return [c for c, t in df.dtypes if c not in exclude and any(n in t for n in numeric)]
+        return [
+            c for c, t in df.dtypes if c not in exclude and any(n in t for n in numeric)
+        ]
 
     # ── Data loading & splitting ────────────────────────
 
@@ -66,19 +77,26 @@ class AbstractPipeline:
         df = assembler.transform(df)
 
         # Cache for repeated access in training
-        df = df.select("event_hour", self.cfg.feature_column_name, "bike_demand", "dock_demand")
+        df = df.select(
+            "event_hour", self.cfg.feature_column_name, "bike_demand", "dock_demand"
+        )
         df = df.cache()
 
         total = df.count()
         train, val, test = df.randomSplit(
-            [self.cfg.train_fraction, self.cfg.val_fraction,
-             1.0 - self.cfg.train_fraction - self.cfg.val_fraction],
+            [
+                self.cfg.train_fraction,
+                self.cfg.val_fraction,
+                1.0 - self.cfg.train_fraction - self.cfg.val_fraction,
+            ],
             seed=self.cfg.seed,
         )
         train = train.cache()
         val = val.cache()
 
-        print(f"  Total: {total:,}  Train: {train.count():,}  Val: {val.count():,}  Test: {test.count():,}")
+        print(
+            f"  Total: {total:,}  Train: {train.count():,}  Val: {val.count():,}  Test: {test.count():,}"
+        )
         return train, val, test
 
     # ── Hyperopt integration ────────────────────────────
@@ -89,15 +107,21 @@ class AbstractPipeline:
         ...
 
     @abstractmethod
-    def get_regressor(self, label_name: str, predict_name: str, params: Dict[str, Any] = None):
+    def get_regressor(
+        self, label_name: str, predict_name: str, params: Dict[str, Any] = None
+    ):
         """Create an RF or GBT regressor with given parameters."""
         ...
 
     # ── Training ────────────────────────────────────────
 
     def train_and_evaluate(
-        self, train, val, test,
-        label_name: str, predict_name: str,
+        self,
+        train,
+        val,
+        test,
+        label_name: str,
+        predict_name: str,
         model_name: str,
         params: Dict[str, Any] = None,
     ) -> Dict[str, float]:
@@ -143,8 +167,12 @@ class AbstractPipeline:
 
         results = {
             "model": model_name,
-            "val_rmse": val_rmse, "val_r2": val_r2, "val_mae": val_mae,
-            "test_rmse": test_rmse, "test_r2": test_r2, "test_mae": test_mae,
+            "val_rmse": val_rmse,
+            "val_r2": val_r2,
+            "val_mae": val_mae,
+            "test_rmse": test_rmse,
+            "test_r2": test_r2,
+            "test_mae": test_mae,
             "train_time_s": elapsed,
             "params": params,
         }
@@ -164,7 +192,9 @@ class AbstractPipeline:
         for task_label, task_name in [("bike_demand", "bike"), ("dock_demand", "dock")]:
             print(f"\n  --- {task_name} ---")
             r = self.train_and_evaluate(
-                train, val, test,
+                train,
+                val,
+                test,
                 label_name=task_label,
                 predict_name=f"pred_{task_name}",
                 model_name=f"{task_name}_model",
@@ -175,7 +205,9 @@ class AbstractPipeline:
         print("\n" + "=" * 60)
         print("  Summary")
         for r in results:
-            print(f"  {r['model']}: Test RMSE={r['test_rmse']:.2f}, R2={r['test_r2']:.4f}")
+            print(
+                f"  {r['model']}: Test RMSE={r['test_rmse']:.2f}, R2={r['test_r2']:.4f}"
+            )
 
         # Save summary
         summary_path = os.path.join(

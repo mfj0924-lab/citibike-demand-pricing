@@ -30,6 +30,7 @@ class GBTPipeline(AbstractPipeline):
 
     def get_search_space(self) -> Dict[str, Any]:
         from hyperopt import hp
+
         return {
             "maxIter": hp.quniform("maxIter", 20, 100, 10),
             "maxDepth": hp.quniform("maxDepth", 5, 20, 1),
@@ -38,7 +39,9 @@ class GBTPipeline(AbstractPipeline):
             "subsamplingRate": hp.uniform("subsamplingRate", 0.5, 1.0),
         }
 
-    def get_regressor(self, label_name: str, predict_name: str, params: Dict[str, Any] = None):
+    def get_regressor(
+        self, label_name: str, predict_name: str, params: Dict[str, Any] = None
+    ):
         if params is None:
             params = {}
         return GBTRegressor(
@@ -49,8 +52,12 @@ class GBTPipeline(AbstractPipeline):
             maxIter=int(params.get("maxIter", self.cfg.max_iter)),
             maxDepth=int(params.get("maxDepth", self.cfg.max_depth)),
             maxBins=int(params.get("maxBins", self.cfg.max_bins)),
-            minInstancesPerNode=int(params.get("minInstancesPerNode", self.cfg.min_instances_per_node)),
-            subsamplingRate=float(params.get("subsamplingRate", self.cfg.subsampling_rate)),
+            minInstancesPerNode=int(
+                params.get("minInstancesPerNode", self.cfg.min_instances_per_node)
+            ),
+            subsamplingRate=float(
+                params.get("subsamplingRate", self.cfg.subsampling_rate)
+            ),
         )
 
 
@@ -59,7 +66,9 @@ if __name__ == "__main__":
     base = os.path.join(os.path.dirname(__file__), "..", "..")
 
     config = GBTPipelineConfig(
-        silver_parquet=os.path.join(base, "data", "processed", "silver", "hourly_demand.parquet"),
+        silver_parquet=os.path.join(
+            base, "data", "processed", "silver", "hourly_demand.parquet"
+        ),
         model_artifact_path=os.path.join(base, "models", "gbt"),
     )
 

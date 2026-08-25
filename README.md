@@ -56,8 +56,7 @@ $env:JAVA_HOME = "<JDK_17_DIR>"
 python -m src.data_pipeline.data_ingestor
 # Silver、Gold 阶段以 src/data_pipeline 中的模块和项目说明为准
 
-# 训练与测试
-python -m src.train_pipeline.train
+# 训练管线由 src/train_pipeline/ 中的 RF、GBT 与调参模块组成；先运行测试确认环境
 python -m pytest
 
 # 启动API服务

@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (large files)
+data/raw/*.csv
+data/raw/*.zip
+data/processed/bronze/*
+data/processed/silver/*
+data/processed/gold/*
+data/unstructured/*
+!data/raw/.gitkeep
+!data/processed/bronze/.gitkeep
+!data/processed/silver/.gitkeep
+!data/processed/gold/.gitkeep
+!data/unstructured/.gitkeep
+!data/raw/station_information.json
+
+# Models
+models/*
+!models/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Local caches and generated material
+.cache/
+.pytest_cache/
+.ruff_cache/
+.frontend-slides/
+logs/
+unpacked_report/
+*.log
+*.zip
+*.docx
+data/*.zip
+data/processed/*.csv
+答辩演示*.html
+Topic9_答辩演示.html
+
+# Reference projects
+reference-*/
+
+# Spark
+metastore_db/
+derby.log
+spark-warehouse/

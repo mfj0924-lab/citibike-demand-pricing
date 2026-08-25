@@ -1,0 +1,22 @@
+[flake8]
+max-line-length = 100
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    notebooks/,
+    reference-*/,
+    *.ipynb_checkpoints,
+    data/
+ignore =
+    E203,
+    W503,
+    E501,
+    E402,
+    E401,
+    E127,
+    E128,
+    E226,
+    E261,
+    F541,
+    F841

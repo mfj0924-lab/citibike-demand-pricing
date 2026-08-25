@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>城市共享单车动态定价策略 — 答辩演示</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;900&family=Noto+Serif+SC:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES — Signal 风格
+   深蓝侧栏 + 珊瑚橙 + 编辑部科技风
+   =========================================== */
+:root {
+    --stage-bg: #ffffff;
+    --bg-main: #ffffff;
+    --bg-alt: #f5f6f8;
+    --bg-card: #ffffff;
+    --t1: #1a2332;
+    --t2: #4a5568;
+    --t3: #8899aa;
+    --accent: #ff6b35;
+    --accent-bg: rgba(255,107,53,0.08);
+    --accent-border: rgba(255,107,53,0.2);
+    --blue: #2563eb;
+    --blue-bg: rgba(37,99,235,0.06);
+    --green: #16a34a;
+    --green-bg: rgba(22,163,74,0.08);
+    --red: #dc2626;
+    --red-bg: rgba(220,38,38,0.06);
+    --yellow: #d97706;
+    --yellow-bg: rgba(217,119,6,0.08);
+    --purple: #7c3aed;
+    --purple-bg: rgba(124,58,237,0.08);
+    --font-display: 'Noto Serif SC', serif;
+    --font-body: 'Noto Sans SC', sans-serif;
+    --font-mono: 'Courier New', monospace;
+    --ease: cubic-bezier(0.16,1,0.3,1);
+    --dur: 0.7s;
+    --border: rgba(0,0,0,0.06);
+    --shadow: 0 2px 12px rgba(0,0,0,0.05);
+    --sidebar-w: 29vw;
+}
+
+/* ===========================================
+   FULLSCREEN SLIDES — fills browser, no letterbox
+   =========================================== */
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg-main);}
+.deck-viewport{position:fixed;inset:0;overflow:hidden;background:var(--bg-main);}
+.deck-stage{position:absolute;inset:0;overflow:hidden;background:var(--bg-main);}
+.slide{position:absolute;inset:0;width:100%;height:100%;overflow:hidden;visibility:hidden;opacity:0;pointer-events:none;background:var(--bg-main);display:flex;}
+.slide.active,.slide.visible{visibility:visible;opacity:1;pointer-events:auto;z-index:1;}
+img,video,canvas,svg{max-width:100%;max-height:100%;}
+.deck-controls{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:1000;display:flex;gap:14px;align-items:center;}
+.deck-controls button{background:rgba(0,0,0,0.08);border:1px solid rgba(0,0,0,0.15);color:var(--t1);width:44px;height:44px;border-radius:50%;cursor:pointer;font-size:20px;transition:all 0.25s;font-weight:700;}
+.deck-controls button:hover{background:var(--accent);color:#fff;border-color:var(--accent);}
+.page-ind{font-size:18px;color:var(--t2);font-weight:500;min-width:80px;text-align:center;}
+@media print{html,body{width:100%;height:auto;overflow:visible;background:#fff;}.deck-viewport{position:static;overflow:visible;background:#fff;}
+.deck-stage{position:static;overflow:visible;background:none;}
+.slide{position:relative;display:flex!important;visibility:visible!important;opacity:1!important;width:1920px;height:1080px;break-after:page;background:#fff;}
+.slide:last-child{break-after:auto;}.deck-controls{display:none!important;}.sidebar{display:none!important;}.main-content{padding:80px 100px!important;}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:0.01ms!important;transition-duration:0.2s!important;}}
+
+/* ===========================================
+   SIDEBAR
+   =========================================== */
+.sidebar{width:var(--sidebar-w);background:linear-gradient(170deg,#0f1923 0%,#1a2d3d 40%,#152535 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;flex-shrink:0;position:relative;overflow:hidden;}
+.sidebar::before{content:'';position:absolute;right:0;top:0;bottom:0;width:1px;background:linear-gradient(180deg,transparent,var(--accent),transparent);opacity:0.3;}
+.sb-accent{color:var(--accent);font-size:14px;font-weight:700;letter-spacing:6px;text-transform:uppercase;writing-mode:vertical-rl;font-family:var(--font-body);margin-bottom:30px;opacity:0.8;}
+.sb-title{color:#fff;font-size:56px;font-weight:900;writing-mode:vertical-rl;letter-spacing:6px;font-family:var(--font-display);line-height:1.3;}
+.sb-sub{color:rgba(255,255,255,0.3);font-size:18px;writing-mode:vertical-rl;letter-spacing:3px;font-family:var(--font-body);margin-top:40px;}
+.sb-dot{width:4px;height:4px;background:var(--accent);border-radius:50%;position:absolute;right:24px;}
+.sb-dot:nth-child(1){top:120px;}.sb-dot:nth-child(2){top:124px;animation-delay:0s;}
+.sb-dot:nth-child(3){bottom:160px;}.sb-dot:nth-child(4){bottom:164px;animation-delay:0s;}
+
+/* ===========================================
+   MAIN CONTENT AREA
+   =========================================== */
+.main-content{flex:1;display:flex;flex-direction:column;padding:6vh 5vw 4vh 4vw;overflow:hidden;position:relative;}
+.main-content::after{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--accent),transparent 60%);opacity:0.2;}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+.reveal{opacity:0;transform:translateY(22px);transition:opacity var(--dur) var(--ease),transform var(--dur) var(--ease);}
+.slide.visible .reveal{opacity:1;transform:translateY(0);}
+.reveal:nth-child(1){transition-delay:0.02s;}.reveal:nth-child(2){transition-delay:0.08s;}.reveal:nth-child(3){transition-delay:0.14s;}
+.reveal:nth-child(4){transition-delay:0.20s;}.reveal:nth-child(5){transition-delay:0.26s;}.reveal:nth-child(6){transition-delay:0.32s;}
+.reveal:nth-child(7){transition-delay:0.38s;}.reveal:nth-child(8){transition-delay:0.44s;}
+
+/* ===========================================
+   LAYOUT
+   =========================================== */
+.row{display:flex;gap:24px;margin-top:4px;}.col{flex:1;}.col2{flex:2;}.col3{flex:3;}
+.tag{display:inline-block;background:var(--accent-bg);color:var(--accent);padding:3px 12px;border-radius:4px;font-size:15px;font-weight:600;margin-right:8px;}
+.h2{font-size:40px;font-weight:700;color:var(--t1);margin-bottom:16px;font-family:var(--font-display);}
+.h3{font-size:24px;color:var(--accent);font-weight:600;margin-bottom:10px;font-family:var(--font-display);}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 24px;box-shadow:var(--shadow);}
+.card p{font-size:18px;color:var(--t2);line-height:1.55;}
+.bullet-list{list-style:none;padding:0;}.bullet-list li{font-size:20px;color:var(--t2);padding:8px 0;display:flex;align-items:flex-start;gap:12px;line-height:1.5;}
+.bullet-list li::before{content:'\203A';color:var(--accent);font-size:20px;font-weight:700;flex-shrink:0;margin-top:1px;}
+.slide-num{position:absolute;bottom:2vh;right:2vw;z-index:2;font-size:14px;color:var(--t3);font-family:var(--font-mono);}
+.kpi{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;text-align:center;box-shadow:var(--shadow);}
+.kpi .v{font-size:34px;font-weight:900;font-family:var(--font-display);}.kpi .l{font-size:14px;color:var(--t3);margin-top:4px;}
+.kpi-row{display:flex;gap:14px;}
+.principle-card{background:var(--accent-bg);border:1px solid var(--accent-border);border-radius:10px;padding:14px 20px;margin-top:8px;}
+.principle-card .plabel{font-size:14px;color:var(--accent);font-weight:700;margin-bottom:3px;}
+.principle-card .ptext{font-size:17px;color:var(--t2);line-height:1.5;}
+
+/* ===== REFERENCE BAR ===== */
+.ref-bar{position:absolute;bottom:8vh;left:0;right:0;display:flex;gap:12px;font-size:13px;padding:0 4vw;}
+.ref-item{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:4px;font-size:13px;}
+.ref-borrow{background:var(--accent-bg);color:var(--accent);}
+.ref-self{background:var(--green-bg);color:var(--green);}
+
+/* ===== TIMELINE ===== */
+.timeline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center;}
+.tl-node{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;text-align:center;min-width:90px;box-shadow:var(--shadow);}
+.tl-node .num{font-size:28px;font-weight:900;color:var(--accent);font-family:var(--font-display);}
+.tl-node .lbl{font-size:14px;color:var(--t2);margin-top:2px;}
+.tl-arrow{font-size:16px;color:var(--accent);font-weight:700;}
+
+/* ===== MEDALLION FUNNEL ===== */
+.funnel{display:flex;flex-direction:column;gap:5px;align-items:center;}
+.funnel-layer{padding:12px 22px;border-radius:8px;text-align:center;font-size:17px;font-weight:500;display:flex;justify-content:space-between;gap:30px;min-width:260px;}
+.funnel-layer .name{font-weight:700;}.funnel-layer .stat{font-size:15px;opacity:0.7;}
+.funnel-arrow{font-size:16px;color:var(--accent);margin:1px 0;}
+.fl1{background:rgba(100,116,139,0.08);width:85%;}
+.fl2{background:var(--accent-bg);width:74%;}
+.fl3{background:var(--blue-bg);width:62%;}
+.fl4{background:var(--green-bg);width:50%;}
+
+/* ===== FEATURE BARS ===== */
+.feat-bar-row{display:flex;align-items:center;gap:10px;margin:6px 0;}
+.feat-bar-row .ver{font-size:16px;font-weight:600;min-width:100px;text-align:right;color:var(--t1);}
+.feat-bar-row .fbar{flex:1;height:32px;border-radius:5px;display:flex;align-items:center;padding:0 14px;color:#fff;font-weight:700;font-size:16px;}
+.feat-bar-row .fbar.v1{background:var(--red);}
+.feat-bar-row .fbar.v2{background:var(--yellow);}
+.feat-bar-row .fbar.v3{background:var(--green);}
+
+/* ===== PRICING MATRIX ===== */
+.matrix{position:relative;width:30vw;height:30vw;max-width:440px;max-height:440px;margin:0 auto;}
+.matrix .q{position:absolute;width:180px;padding:16px 12px;border-radius:10px;text-align:center;font-size:16px;font-weight:600;border:2px solid;}
+.q-tl{top:16px;left:16px;background:var(--red-bg);border-color:rgba(220,38,38,0.25);}
+.q-tr{top:16px;right:16px;background:var(--green-bg);border-color:rgba(22,163,74,0.25);}
+.q-bl{bottom:16px;left:16px;background:rgba(220,38,38,0.12);border-color:rgba(220,38,38,0.35);}
+.q-br{bottom:16px;right:16px;background:var(--yellow-bg);border-color:rgba(217,119,6,0.25);}
+.matrix .q .big{font-size:22px;margin:4px 0;}
+.matrix .q .reason{font-size:13px;opacity:0.7;}
+.axis-h{position:absolute;top:50%;left:20px;right:20px;height:1.5px;background:rgba(0,0,0,0.1);}
+.axis-v{position:absolute;left:50%;top:20px;bottom:20px;width:1.5px;background:rgba(0,0,0,0.1);}
+.axis-label{position:absolute;font-size:13px;color:var(--t3);font-weight:500;}
+.al-top{top:0;left:50%;transform:translateX(-50%);}
+.al-bottom{bottom:0;left:50%;transform:translateX(-50%);}
+.al-left{left:0;top:50%;transform:translateY(-50%) rotate(-90deg);transform-origin:center;}
+.al-right{right:0;top:50%;transform:translateY(-50%) rotate(90deg);transform-origin:center;}
+
+/* ===== API ROWS ===== */
+.api-row{display:flex;align-items:center;gap:12px;font-size:18px;background:var(--bg-alt);border-radius:8px;padding:14px 20px;margin-bottom:8px;}
+.api-row .method{color:#fff;padding:4px 12px;border-radius:4px;font-size:14px;font-weight:700;min-width:56px;text-align:center;}
+.api-row .path{color:var(--accent);font-family:var(--font-mono);font-size:16px;min-width:200px;}
+.api-row .desc{color:var(--t2);font-size:16px;flex:1;}
+
+/* ===== TERMINAL ===== */
+.terminal{background:#1a2332;border-radius:10px;padding:16px 22px;font-family:var(--font-mono);font-size:15px;line-height:1.75;color:#2ecc71;box-shadow:0 4px 16px rgba(0,0,0,0.15);}
+.terminal .cmd{color:#8899aa;}
+.terminal .pass{color:#2ecc71;}
+
+/* ===== IMPORTANCE BARS ===== */
+.imp-row{display:flex;align-items:center;gap:8px;margin:6px 0;font-size:18px;}
+.imp-row .imp-label{min-width:145px;text-align:right;color:var(--t2);font-weight:500;}
+.imp-row .imp-bar{height:24px;border-radius:3px;display:inline-block;}
+</style>
+</head>
+<body>
+
+<div class="deck-viewport"><main class="deck-stage" id="stage">
+
+<!-- ==================== SLIDE 1: 封面 ==================== -->
+<section class="slide active">
+    <div class="sidebar reveal">
+        <div class="sb-dot" style="top:120px;"></div><div class="sb-dot" style="top:124px;"></div>
+        <div class="sb-dot" style="bottom:160px;"></div><div class="sb-dot" style="bottom:164px;"></div>
+        <span class="sb-accent">CITIBIKE PRICING</span>
+        <div class="sb-title">纽约共享单车<br>动态定价策略</div>
+        <span class="sb-sub">PySpark · Random Forest · Hyperopt · FastAPI</span>
+    </div>
+    <div class="main-content" style="justify-content:center;">
+        <div class="reveal" style="display:flex;gap:10px;margin-bottom:24px;">
+            <span class="tag">PySpark</span><span class="tag">Random Forest</span><span class="tag">Hyperopt</span><span class="tag">动态定价</span>
+        </div>
+        <h1 class="reveal" style="font-size:64px;font-weight:900;color:var(--t1);line-height:1.2;margin-bottom:12px;">城市共享单车<br>动态定价策略</h1>
+        <p class="reveal" style="font-size:24px;color:var(--t2);font-weight:300;margin-bottom:40px;">基于纽约 CitiBike 大数据的站点需求预测与智能定价</p>
+        <div class="reveal" style="width:60px;height:3px;background:var(--accent);border-radius:2px;margin-bottom:28px;"></div>
+        <p class="reveal" style="font-size:16px;color:var(--t3);">大数据管理与应用 · 课程设计 Topic 2 · 2026年6月</p>
+        <div class="slide-num">1 / 16</div>
+    </div>
+</section>
+
+<!-- ==================== SLIDE 2: 开源参考 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">REFERENCES</span>
+        <div class="sb-title" style="font-size:42px;">开源参考</div>
+        <span class="sb-sub" style="margin-top:30px;">Shakleen · Charan · 自研</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">开源参考与项目总览</h2>
+        <div class="row" style="margin-bottom:20px;">
+            <div class="card" style="flex:1;">
+                <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:6px;">Shakleen · CitiBike-Demand-Prediction</p>
+                <p style="font-size:17px;">借鉴：Medallion数据管道、事件拆分、双目标回归、训练流水线</p>
+                <p style="font-size:14px;color:var(--accent);margin-top:4px;">用于：阶段二、阶段四</p>
+            </div>
+            <div class="card" style="flex:1;">
+                <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:6px;">Charan · CitiBike_BigData (Bikenomic)</p>
+                <p style="font-size:17px;">借鉴：供需缺口定价思路、站点空间推荐逻辑</p>
+                <p style="font-size:14px;color:var(--accent);margin-top:4px;">用于：阶段五</p>
+            </div>
+        </div>
+        <div class="reveal" style="text-align:center;margin-bottom:18px;">
+            <span class="ref-item ref-self" style="display:inline-flex;font-size:16px;padding:6px 16px;">自研：空间匹配 · 业务特征挖掘 · 天气接入 · Hyperopt调参 · FastAPI+PyEcharts · 23个测试</span>
+        </div>
+        <div class="timeline reveal">
+            <div class="tl-node"><div class="num">1</div><div class="lbl">环境+数据</div></div><div class="tl-arrow">→</div>
+            <div class="tl-node"><div class="num">2</div><div class="lbl">PySpark<br>数据管道</div></div><div class="tl-arrow">→</div>
+            <div class="tl-node"><div class="num">3</div><div class="lbl">特征<br>+降维</div></div><div class="tl-arrow">→</div>
+            <div class="tl-node"><div class="num">4</div><div class="lbl">模型<br>+调参</div></div><div class="tl-arrow">→</div>
+            <div class="tl-node" style="border-color:var(--accent-border);background:var(--accent-bg);"><div class="num">5</div><div class="lbl" style="color:var(--accent);font-weight:700;">定价策略</div></div><div class="tl-arrow">→</div>
+            <div class="tl-node"><div class="num">6</div><div class="lbl">API<br>+看板</div></div><div class="tl-arrow">→</div>
+            <div class="tl-node"><div class="num">7</div><div class="lbl">测试<br>+交付</div></div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Shakleen架构 + Charan定价思维</span>
+            <span class="ref-item ref-self">自研: 空间匹配/Hyperopt/FastAPI/PyEcharts/天气接入</span>
+        </div>
+    </div>
+    <div class="slide-num">2 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 3: 阶段一+二 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGES 1-2</span>
+        <div class="sb-title" style="font-size:42px;">环境搭建<br>数据管道</div>
+        <span class="sb-sub" style="margin-top:30px;">Medallion Architecture</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">阶段一+二：环境搭建 & PySpark 数据管道</h2>
+        <div class="row" style="margin-top:6px;">
+            <div class="col">
+                <ul class="bullet-list" style="margin-bottom:12px;">
+                    <li>Python venv + JDK 17 + PySpark 4.1.2 + winutils/hadoop.dll</li>
+                    <li>下载 CitiBike 2026年1-5月数据（16个CSV，2.7GB）</li>
+                    <li>下载 GBFS 站点元数据（2412站）+ 天气数据（151天）</li>
+                    <li>四层 Medallion 管道：Raw → Bronze → Silver → Gold</li>
+                </ul>
+                <div class="principle-card">
+                    <div class="plabel">原理：Medallion = 像淘金一样逐层提纯。每层是存档点，崩了不重跑。</div>
+                    <div class="ptext">PySpark 把1450万行切块并行处理 → 不吃内存。Parquet 列式压缩比 CSV 小 5-10倍。</div>
+                </div>
+                <div class="kpi-row" style="margin-top:12px;">
+                    <div class="kpi"><div class="v" style="color:var(--accent);">1,450万</div><div class="l">骑行记录</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--blue);">438万</div><div class="l">站点-小时</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--green);">1.3 GB</div><div class="l">Bronze</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--yellow);">2,433</div><div class="l">站点</div></div>
+                </div>
+            </div>
+            <div class="col" style="display:flex;align-items:center;justify-content:center;">
+                <div class="funnel">
+                    <div class="funnel-layer fl1"><span class="name">Raw CSV</span><span class="stat">2.7GB · 1450万条</span></div>
+                    <div style="font-size:14px;color:var(--t3);text-align:center;margin:2px 0;">"原样读进来，什么也不改"</div>
+                    <div class="funnel-arrow">▼ 时间统一 · 去重 · 站点拆分</div>
+                    <div class="funnel-layer fl2"><span class="name">Bronze</span><span class="stat">1.3GB · 1450万条</span></div>
+                    <div style="font-size:14px;color:var(--t3);text-align:center;margin:2px 0;">"干净但仍是原始记录，一行=一次骑行"</div>
+                    <div class="funnel-arrow">▼ 事件拆分 · 站点×小时聚合 · +特征 · +天气</div>
+                    <div class="funnel-layer fl3"><span class="name">Silver</span><span class="stat">73MB · 22字段 · 438万条</span></div>
+                    <div style="font-size:14px;color:var(--t3);text-align:center;margin:2px 0;">"按站点+小时汇总，一行=一个站一小时的情况"</div>
+                    <div class="funnel-arrow">▼ 标准化 · PCA(5主成分)</div>
+                    <div class="funnel-layer fl4"><span class="name">Gold</span><span class="stat">188MB · 训练矩阵</span></div>
+                    <div style="font-size:14px;color:var(--t3);text-align:center;margin:2px 0;">"标准化+压缩后，直接喂给模型训练"</div>
+                </div>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Shakleen Medallion管道</span>
+            <span class="ref-item ref-self">改造: Delta Lake→Parquet · 简化时区分支</span>
+        </div>
+    </div>
+    <div class="slide-num">3 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 4: 阶段三(上) — 特征工程 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGE 3a</span>
+        <div class="sb-title" style="font-size:38px;">特征工程<br>19个特征</div>
+        <span class="sb-sub" style="margin-top:30px;">Feature Engineering</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">阶段三：特征工程 — 从 11 个到 19 个特征</h2>
+        <div class="row" style="margin-top:8px;">
+            <div class="col">
+                <ul class="bullet-list" style="margin-bottom:12px;">
+                    <li><b style="color:var(--green);">自研 空间匹配</b>：cKDTree+经纬度最近邻 → 两套站点ID打通（99.3%匹配）</li>
+                    <li><b style="color:var(--green);">自研 业务特征</b>：从 rideable_type / member_casual 挖掘电动车比例、会员占比</li>
+                    <li><b style="color:var(--green);">自研 天气接入</b>：Open-Meteo API 获取151天 气温/降水/风速</li>
+                    <li>时间特征：Cyclic Encoding(sin/cos) + is_weekend + is_rush_hour</li>
+                </ul>
+                <div class="principle-card">
+                    <div class="plabel">Cyclic Encoding 原理</div>
+                    <div class="ptext">用 sin/cos 编码小时和星期几——让23点和0点在数学上变成相邻值（普通数字编码做不到：23和0差得远，但实际它们挨着）。</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="margin-bottom:10px;padding:16px 20px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:18px;margin-bottom:10px;">19个特征完整清单（括号=中译）</p>
+                    <div style="display:flex;gap:12px;font-size:14px;line-height:2.1;">
+                        <div style="flex:1;">
+                            <p style="color:var(--blue);font-weight:700;font-size:15px;">11 时间特征</p>
+                            <p style="color:var(--t2);margin:0;">month（月份）· day（日）<br>weekday（星期几）· weekofyear（第几周）<br>dayofyear（第几天）· hour（小时）<br>is_weekend（是否周末）<br>is_rush_hour（是否早晚高峰）<br>hour_sin · hour_cos（小时周期编码）<br>weekday_sin · weekday_cos（星期周期编码）<br>is_holiday（是否假期）</p>
+                        </div>
+                        <div style="flex:1;">
+                            <p style="color:var(--accent);font-weight:700;font-size:15px;">5 业务</p>
+                            <p style="color:var(--t2);margin:0;">electric_ratio（电动车占比）<br>member_ratio（年费会员占比）<br>avg_trip_duration_min（平均骑行时长）<br>capacity（站点桩位数）<br>total_events（总事件数）</p>
+                            <p style="color:var(--green);font-weight:700;font-size:15px;margin-top:6px;">3 天气</p>
+                            <p style="color:var(--t2);margin:0;">temp_c（气温）· precip_mm（降水）<br>wind_kmh（风速）</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Shakleen 周期编码 + 节假日标注</span>
+            <span class="ref-item ref-self">自研: 空间匹配/天气/业务特征</span>
+        </div>
+    </div>
+    <div class="slide-num">4 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 5: 阶段三(下) — PCA ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGE 3b</span>
+        <div class="sb-title" style="font-size:38px;">PCA<br>降维</div>
+        <span class="sb-sub" style="margin-top:30px;">5 Principal Components</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">阶段三：PCA 降维 — 11维时间特征 → 5个主成分</h2>
+        <div style="margin-top:10px;">
+            <div class="card" style="margin-bottom:12px;padding:16px 24px;">
+                <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:12px;">5 个主成分解释</p>
+                <div style="font-size:15px;line-height:1.85;">
+                    <p style="margin:0 0 10px 0;"><b style="color:var(--accent);">PC1 日周期节律 (34.8%)</b> — hour_sin + hour_cos + is_rush_hour。描述"一天中哪个时段"</p>
+                    <p style="margin:0 0 10px 0;"><b style="color:var(--accent);">PC2 季节性趋势 (21.5%)</b> — month + dayofyear + weekofyear。描述"一年中哪个季节"</p>
+                    <p style="margin:0 0 10px 0;"><b style="color:var(--accent);">PC3 周周期模式 (20.7%)</b> — weekday + is_weekend + weekday_sin/cos。描述"工作日 vs 周末"</p>
+                    <p style="margin:0 0 10px 0;"><b style="color:var(--accent);">PC4 节假日效应 (11.6%)</b> — is_holiday + day。节假日偏离正常模式的独立信号</p>
+                    <p style="margin:0;"><b style="color:var(--accent);">PC5 残余变异 (11.5%)</b> — 前 4 个没覆盖到的微小差异（如特殊活动）</p>
+                </div>
+            </div>
+            <div class="card" style="padding:16px 24px;background:var(--accent-bg);border-color:var(--accent-border);">
+                <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:8px;">PCA 做了什么？为什么需要它？</p>
+                <p style="font-size:17px;color:var(--t2);line-height:1.65;">11 个时间特征中有很多"在说同一件事"——比如 hour、hour_sin、hour_cos 三个都在描述时间。PCA 把说同一件事的特征合成一个主成分，从 11 个压缩成 5 个。累计方差 100% = 压缩过程没有丢失任何信息，只是去掉了冗余。</p>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-self">自研: PCA 5主成分命名 + 物理含义解释</span>
+        </div>
+    </div>
+    <div class="slide-num">5 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 5: 阶段四 — 模型训练 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGE 4</span>
+        <div class="sb-title" style="font-size:42px;">模型训练<br>+调参</div>
+        <span class="sb-sub" style="margin-top:30px;">R2 0.135 → 0.644</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">阶段四：模型训练 & R² 进化</h2>
+        <div class="row" style="margin-top:8px;">
+            <div class="col">
+                <p style="font-size:20px;color:var(--t1);font-weight:600;margin-bottom:8px;">三轮特征迭代 — R² 进化</p>
+                <div class="feat-bar-row"><span class="ver">v1 纯时间</span><div class="fbar v1">R² = 0.135</div></div>
+                <div class="feat-bar-row"><span class="ver">v2 +业务特征</span><div class="fbar v2">R² = 0.631 ↑ 4.7×</div></div>
+                <div class="feat-bar-row"><span class="ver">v3 +天气容量</span><div class="fbar v3">R² = 0.644</div></div>
+                <div class="principle-card" style="margin-top:12px;">
+                    <div class="plabel">模型是怎么训练的</div>
+                    <div class="ptext">把 350 万条历史数据切成 80% 训练集 + 10% 验证集 + 10% 测试集。模型在训练集上"看例子学习"（每条数据有 19 个特征值 + 正确答案借出量），自己总结出规律，然后在没见过的测试集上检验准不准。Random Forest 的原理：造 100 棵决策树，每棵树用随机抽样的数据训练，最终 100 棵树投票取平均值。</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;">模型：Random Forest (PySpark MLlib)</p>
+                    <p style="font-size:17px;">100棵树 · Bagging抗过拟合 · 自带特征重要性</p>
+                    <p style="font-size:17px;">350万训练数据 · <b style="color:var(--accent);">R²=0.644, RMSE=3.04</b></p>
+                </div>
+                <p style="font-size:18px;color:var(--t1);font-weight:600;margin:10px 0 6px;">特征重要性 Top-4</p>
+                <div class="imp-row"><span class="imp-label">电动车比例</span><span class="imp-bar" style="width:372px;background:var(--accent);"></span><span style="color:var(--accent);font-weight:700;">0.372</span></div>
+                <div class="imp-row"><span class="imp-label">会员占比</span><span class="imp-bar" style="width:359px;background:var(--accent);"></span><span style="color:var(--accent);font-weight:700;">0.359</span></div>
+                <div class="imp-row"><span class="imp-label">平均骑行时长</span><span class="imp-bar" style="width:158px;background:var(--accent);"></span><span>0.158</span></div>
+                <div class="imp-row"><span class="imp-label">小时(cos编码)</span><span class="imp-bar" style="width:24px;background:var(--blue);"></span><span style="color:var(--t2);">0.024</span></div>
+                <p style="font-size:15px;color:var(--t2);margin-top:6px;">前3个业务特征合计 = 0.889 vs 所有时间特征合计 = 0.111</p>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Shakleen RF/GBT 训练流水线</span>
+            <span class="ref-item ref-self">自研: Hyperopt调参 · 三轮特征工程</span>
+        </div>
+    </div>
+    <div class="slide-num">6 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 6: 阶段四 — Hyperopt ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGE 4 CONT</span>
+        <div class="sb-title" style="font-size:38px;">Hyperopt<br>贝叶斯优化</div>
+        <span class="sb-sub" style="margin-top:30px;">TPE · 8 Trials</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">Hyperopt 贝叶斯超参数搜索</h2>
+        <div class="row" style="margin-top:12px;">
+            <div class="col">
+                <div class="card" style="margin-bottom:12px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:8px;">自研 Hyperopt 贝叶斯自动调参</p>
+                    <p style="font-size:17px;line-height:1.65;">"搜索空间" = 告诉算法"你可以试的参数范围"：<br>每棵树最多长多深 (maxDepth:5-25)、造多少棵树 (numTrees:20-150)、每次用多少数据 (subsamplingRate:0.5-1.0) 等 5 个。</p>
+                </div>
+                <div class="principle-card">
+                    <div class="plabel">贝叶斯优化 — 用找餐厅类比</div>
+                    <div class="ptext"><b>阶段1"乱试建印象"</b>：先随机抽几个点测试（瞎吃几家）。<br>
+                    <b>阶段2"围绕好的深挖"</b>：发现"这条街川菜评分普遍高"→ 后面集中试这片区域。规律 = 好参数的附近往往也是好参数。<br>
+                    <b>阶段3"不放弃开荒"</b>：已经试过的差区域果断放弃。但还没去过的"陌生区域"仍然可能藏着最优解，偶尔去探一两次——不把鸡蛋全放在已知好区域。<br>
+                    <b>最终</b>：8轮就锁定最优组合。穷举要把整条街全吃遍（可能几百次），贝叶斯只需要 8 次。</div>
+                </div>
+                <div class="kpi-row" style="margin-top:12px;">
+                    <div class="kpi"><div class="v" style="color:var(--accent);">8</div><div class="l">贝叶斯搜索轮次</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--blue);">5</div><div class="l">超参数维度</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--green);">50万</div><div class="l">每次训练样本</div></div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="margin-bottom:12px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:6px;">模型对比：RF vs GBT</p>
+                    <table style="width:100%;font-size:17px;border-collapse:collapse;">
+                        <tr style="border-bottom:1px solid var(--border);"><td style="padding:8px 0;color:var(--t2);">指标</td><td style="padding:8px 0;color:var(--accent);font-weight:700;">Random Forest</td><td style="padding:8px 0;color:var(--blue);font-weight:700;">GBT</td></tr>
+                        <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;color:var(--t2);">R²</td><td style="padding:6px 0;color:var(--accent);font-weight:700;">0.644</td><td style="padding:6px 0;">0.142</td></tr>
+                        <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;color:var(--t2);">RMSE</td><td style="padding:6px 0;color:var(--accent);font-weight:700;">3.04</td><td style="padding:6px 0;">4.71</td></tr>
+                        <tr style="border-bottom:1px solid var(--border);"><td style="padding:6px 0;color:var(--t2);">训练时间</td><td style="padding:6px 0;">57s</td><td style="padding:6px 0;color:var(--green);">44s</td></tr>
+                    </table>
+                </div>
+                <div class="card">
+                    <p style="font-size:17px;color:var(--t2);"><b>GBT（梯度提升树）= Random Forest 的表兄弟。</b>RF 是 100 棵树同时训练、投票平均；GBT 是一棵一棵串行训练，每棵新树专门修正前面所有树的错误。训练更快（44s vs 57s），但在我们只有时间特征时 R² 很低（0.14），加入业务特征后内存不够——因此选了 RF 做主模型。</p>
+                </div>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Shakleen RF/GBT 模型定义</span>
+            <span class="ref-item ref-self">自研: Hyperopt TPE 贝叶斯搜索 + 8轮实验</span>
+        </div>
+    </div>
+    <div class="slide-num">7 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 7: 阶段五 — 定价矩阵 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGE 5 CORE</span>
+        <div class="sb-title" style="font-size:38px;">动态定价<br>策略</div>
+        <span class="sb-sub" style="margin-top:30px;">2x2 Decision Matrix</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">阶段五：动态定价策略 <span class="tag" style="vertical-align:middle;">核心创新</span></h2>
+        <div class="row" style="margin-top:6px;">
+            <div class="col" style="display:flex;align-items:center;justify-content:center;">
+                <div class="matrix">
+                    <div class="axis-h"></div><div class="axis-v"></div>
+                    <div class="axis-label al-top" style="color:var(--green);">空桩充裕</div>
+                    <div class="axis-label al-bottom" style="color:var(--red);">空桩紧张</div>
+                    <div class="axis-label al-left" style="color:var(--red);">车少</div>
+                    <div class="axis-label al-right" style="color:var(--green);">车多</div>
+                    <div class="q q-tl">
+                        <div style="font-size:18px;color:var(--red);">SURGE 涨价</div>
+                        <div class="big">1.2 – 1.5×</div>
+                        <div class="reason">车不够 → 引导去附近站</div>
+                    </div>
+                    <div class="q q-tr">
+                        <div style="font-size:18px;color:var(--green);">DISCOUNT 降价</div>
+                        <div class="big">0.7 – 0.9×</div>
+                        <div class="reason">车和桩都充裕 → 降价引流</div>
+                    </div>
+                    <div class="q q-bl">
+                        <div style="font-size:18px;color:var(--red);">MAX SURGE</div>
+                        <div class="big">1.5 – 2.0×</div>
+                        <div class="reason">既没车又没桩 → 最高封顶2倍</div>
+                    </div>
+                    <div class="q q-br">
+                        <div style="font-size:18px;color:var(--yellow);">MILD SURGE</div>
+                        <div class="big">1.1 – 1.3×</div>
+                        <div class="reason">桩不够 → 阻止还车拥堵</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="principle-card" style="margin-bottom:10px;">
+                    <div class="plabel">定价三步计算流程</div>
+                    <div class="ptext"><b>1. 模型预测</b> 下个小时缺多少车、多多少桩<br>
+                    <b>2. 计算缺口</b> bike_gap = 现有车辆 - 预测需求。负值 = 不够用<br>
+                    <b>3. 映射定价</b> 缺口落到 2×2 矩阵的哪个象限 → 对应乘数<br>
+                    <b>为什么用矩阵</b> = 每个决策可解释——"为什么涨价？"→"预测缺25辆车"，不是黑箱。</div>
+                </div>
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:4px;">设计理念</p>
+                    <p style="font-size:18px;">"预测 + 规则"解耦：ML模型负责准、规则引擎负责解释</p>
+                </div>
+                <div class="card" style="margin-bottom:10px;background:var(--accent-bg);border-color:var(--accent-border);">
+                    <p style="color:var(--accent);font-weight:700;font-size:18px;margin-bottom:4px;">19个特征去哪了？为什么定价只看车和桩？</p>
+                    <p style="font-size:16px;color:var(--t2);line-height:1.6;">19个特征 = 模型的<b>知识</b>。它们被训练时"喂"给了模型，所以模型看到"电动车多+会员多+早8点"就知道这个站需求高。但<b>定价引擎只需要模型的输出数字</b>（预测借出量、预测还入量）+ 当前库存。就像天气预报用了卫星云图、气压、湿度算出"明天80%下雨"——你出门只需看这个80%来决定带不带伞，不需要看卫星云图。</p>
+                </div>
+                <div class="kpi-row">
+                    <div class="kpi"><div class="v" style="color:var(--red);font-size:28px;">0.7%</div><div class="l">Surge · $6.72</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--blue);font-size:28px;">9.3%</div><div class="l">Normal · $4.49</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--green);font-size:28px;">89.8%</div><div class="l">Discount · $3.56</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Charan Bikenomic 供需缺口定价</span>
+            <span class="ref-item ref-self">自研: 四场景量化规则 + 2×2矩阵框架</span>
+        </div>
+    </div>
+    <div class="slide-num">8 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 8: 阶段五 — 详细场景 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGE 5 DETAIL</span>
+        <div class="sb-title" style="font-size:38px;">四场景<br>详解</div>
+        <span class="sb-sub" style="margin-top:30px;">Pricing Analysis</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">四场景详解 & 定价分析</h2>
+        <div class="row" style="margin-top:10px;">
+            <div class="col">
+                <div class="card" style="margin-bottom:10px;border-left:4px solid var(--red);">
+                    <p style="color:var(--red);font-weight:700;font-size:19px;margin-bottom:4px;">Surge 涨价 1.2-2.0×</p>
+                    <p style="font-size:17px;">借出需求 > 现有车辆 → 缺车涨价，引导用户步行 200米去附近有空余的站</p>
+                </div>
+                <div class="card" style="margin-bottom:10px;border-left:4px solid var(--yellow);">
+                    <p style="color:var(--yellow);font-weight:700;font-size:19px;margin-bottom:4px;">Mild Surge 1.1-1.3×</p>
+                    <p style="font-size:17px;">还入需求 > 空桩数 → 站点快被塞满，阻止还车</p>
+                </div>
+                <div class="card" style="margin-bottom:10px;border-left:4px solid var(--blue);">
+                    <p style="color:var(--blue);font-weight:700;font-size:19px;margin-bottom:4px;">Normal 标准定价 1.0×</p>
+                    <p style="font-size:17px;">供需基本平衡 → 维持 CitiBike 基础价 $4.49</p>
+                </div>
+                <div class="card" style="border-left:4px solid var(--green);">
+                    <p style="color:var(--green);font-weight:700;font-size:19px;margin-bottom:4px;">Discount 降价 0.7-0.9×</p>
+                    <p style="font-size:17px;">车辆+空桩充裕 → 降价吸引用户来此站借车，消化闲置</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="margin-bottom:12px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:8px;">全量分析结果：438万条记录</p>
+                    <p style="font-size:17px;color:var(--t2);line-height:1.8;">
+                        Surge（涨价）：<b style="color:var(--red);">30,278条 (0.7%)</b> · 均价 $6.72<br>
+                        Mild Surge：<b style="color:var(--yellow);">10,144条 (0.2%)</b> · 均价 $5.25<br>
+                        Normal：<b style="color:var(--blue);">406,000条 (9.3%)</b> · 均价 $4.49<br>
+                        Discount：<b style="color:var(--green);">3,941,937条 (89.8%)</b> · 均价 $3.56
+                    </p>
+                </div>
+                <div class="principle-card">
+                    <div class="plabel">离线 vs 在线</div>
+                    <div class="ptext">折扣占比 89.8% 是因为离线分析假设所有站初始半满。实际生产环境通过 GBFS 实时 API 获取动态库存后分布将更均衡——这是"生产化改进方向"的加分项。</div>
+                </div>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Charan Bikenomic 供需缺口定价逻辑</span>
+            <span class="ref-item ref-self">自研: 四场景量化规则 + 定价三步法</span>
+        </div>
+    </div>
+    <div class="slide-num">9 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 9: 阶段六 — FastAPI ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGE 6</span>
+        <div class="sb-title" style="font-size:38px;">API服务<br>+看板</div>
+        <span class="sb-sub" style="margin-top:30px;">FastAPI · PyEcharts</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">阶段六：FastAPI 服务 & PyEcharts 看板</h2>
+        <div class="row" style="margin-top:10px;">
+            <div class="col">
+                <p class="h3">三个 API 接口</p>
+                <div class="api-row"><span class="method" style="background:var(--green);">POST</span><span class="path">/predict</span><span class="desc">单次预测 + 定价建议</span></div>
+                <div class="api-row"><span class="method" style="background:var(--green);">POST</span><span class="path">/station/{id}/forecast</span><span class="desc">24小时逐时预报序列</span></div>
+                <div class="api-row"><span class="method" style="background:var(--blue);">GET</span><span class="path">/hotspots</span><span class="desc">涨价/降价 Top-5 站点</span></div>
+                <div class="principle-card" style="margin-top:10px;">
+                    <div class="plabel">FastAPI = 数据格式声明 + 自动校验 + Swagger 交互文档</div>
+                    <div class="ptext">取代原项目的 Flask + Plotly，全部重写为课程要求的 FastAPI + PyEcharts。答辩现场浏览器打开 <b>localhost:8000/docs</b> 即可交互式演示 API 调用。</div>
+                </div>
+            </div>
+            <div class="col">
+                <p class="h3">PyEcharts 看板 (6图)</p>
+                <ul class="bullet-list" style="font-size:18px;">
+                    <li>定价区域分布饼图</li>
+                    <li>24h需求模式折线图</li>
+                    <li>模型特征重要性柱状图</li>
+                    <li>借车vs还车散点图</li>
+                    <li>建议价格分布直方图</li>
+                    <li>Top-10 涨价站点排名</li>
+                </ul>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Shakleen Flask 路由 + Plotly 图表</span>
+            <span class="ref-item ref-self">自研: Flask→FastAPI · Plotly→PyEcharts · 6图看板</span>
+        </div>
+    </div>
+    <div class="slide-num">10 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 10: 阶段七 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">STAGE 7</span>
+        <div class="sb-title" style="font-size:38px;">测试<br>+交付</div>
+        <span class="sb-sub" style="margin-top:30px;">23 tests · CI/CD</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">阶段七：测试 & CI/CD & 交付</h2>
+        <div class="row" style="margin-top:14px;">
+            <div class="col">
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:6px;">23个 pytest 测试</p>
+                    <p style="font-size:17px;">定价引擎 6场景 · 空间匹配 2场景 · 供需缺口 3场景 · IO 3场景 · 距离计算</p>
+                    <p style="font-size:30px;font-weight:900;color:var(--green);margin-top:8px;">23/23 全部通过 · 0.9秒</p>
+                </div>
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:4px;">代码规范</p>
+                    <p style="font-size:17px;">flake8：<b style="color:var(--green);">0 错误</b> · PEP8标准 · 39源文件 + 4测试文件</p>
+                </div>
+                <div class="principle-card">
+                    <div class="plabel">CI/CD = git push 自动触发质检</div>
+                    <div class="ptext">GitHub Actions监听每一次代码推送 → 自动跑 flake8 + pytest → 全绿才算合格。工业界标准交付流程。</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:8px;">自动化流水线</p>
+                    <p style="font-size:26px;text-align:center;color:var(--blue);font-weight:700;">git push → flake8 → pytest → ✅</p>
+                </div>
+                <div class="terminal" style="margin-bottom:10px;">
+                    <span class="cmd">$ flake8 src/ tests/ --count</span><br>
+                    <span style="color:#fff;font-weight:700;font-size:20px;">0</span><br><br>
+                    <span class="cmd">$ pytest tests/ -v</span><br>
+                    test_pricing_engine.py::test_bike_shortage_surge <span class="pass">PASSED</span><br>
+                    test_pricing_engine.py::test_balanced_normal <span class="pass">PASSED</span><br>
+                    test_spatial_matcher.py::test_match_exact <span class="pass">PASSED</span><br>
+                    ...<br>
+                    <span style="color:#fff;font-weight:700;">23 passed in 0.90s</span>
+                </div>
+                <p style="font-size:15px;color:var(--accent);font-weight:600;margin-top:8px;">答辩当天怎么演示给老师看：</p>
+                <p style="font-size:15px;color:var(--t2);line-height:1.8;">1. 打开终端，进入项目目录：<code style="background:var(--bg-alt);padding:2px 6px;border-radius:3px;">cd &lt;项目目录&gt;</code><br>
+                2. 运行 flake8：<code style="background:var(--bg-alt);padding:2px 6px;border-radius:3px;">..\airline-satisfaction-analysis\venv\Scripts\python.exe -m flake8 src/ tests/ --count</code> → 输出 <b style="color:var(--green);">0</b><br>
+                3. 运行 pytest：<code style="background:var(--bg-alt);padding:2px 6px;border-radius:3px;">..\airline-satisfaction-analysis\venv\Scripts\python.exe -m pytest tests/ -v</code> → 23 条全部 <b style="color:var(--green);">PASSED</b></p>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-borrow">借鉴: Shakleen PyTest 测试结构</span>
+            <span class="ref-item ref-self">自研: 23个测试 · flake8配置 · CI流水线</span>
+        </div>
+    </div>
+    <div class="slide-num">11 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 11: 交付清单 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">DELIVERABLES</span>
+        <div class="sb-title" style="font-size:38px;">交付<br>清单</div>
+        <span class="sb-sub" style="margin-top:30px;">Final Outputs</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">项目交付清单</h2>
+        <div class="row" style="margin-top:14px;">
+            <div class="col">
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:6px;">文档</p>
+                    <p style="font-size:17px;line-height:1.8;">Word 课程设计报告（含6张图表 + 7个截图位）<br>HTML 答辩演示（15页 · Signal风格）<br>Topic 9 制作指导 Markdown（供后续选题使用）</p>
+                </div>
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:6px;">代码</p>
+                    <p style="font-size:17px;line-height:1.8;">39个 Python 源文件<br>4个测试文件（23个测试用例）<br>CI/CD GitHub Actions 配置<br>PEP8 标准 · flake8 0 错误</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="margin-bottom:10px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:6px;">数据 + 模型</p>
+                    <p style="font-size:17px;line-height:1.8;">Bronze Parquet 1.3 GB（满足 ≥1GB）<br>Silver 73MB · Gold 188MB<br>4个 RF/GBT 训练好的模型<br>PCA 降维模型 + gold_pipeline</p>
+                </div>
+                <div class="card">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:6px;">服务</p>
+                    <p style="font-size:17px;line-height:1.8;">FastAPI 在线推理服务（3个接口）<br>PyEcharts 数据看板大屏（6图表）<br>Swagger UI 自动文档</p>
+                </div>
+            </div>
+        </div>
+        <div class="ref-bar">
+            <span class="ref-item ref-self" style="background:var(--accent-bg);color:var(--accent);">答辩材料完整 · 可现场演示 · 可复现环境</span>
+        </div>
+    </div>
+    <div class="slide-num">12 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 12: 关键数据一览 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">KEY METRICS</span>
+        <div class="sb-title" style="font-size:38px;">关键<br>数据</div>
+        <span class="sb-sub" style="margin-top:30px;">Results at a Glance</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">关键数据一览</h2>
+        <div class="row" style="margin-top:14px;">
+            <div class="col">
+                <p class="h3">数据处理</p>
+                <div class="kpi-row" style="margin-bottom:12px;">
+                    <div class="kpi"><div class="v" style="color:var(--accent);">1,450万</div><div class="l">原始骑行记录</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--blue);">438万</div><div class="l">站点-小时汇总</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--green);">1.3 GB</div><div class="l">Bronze Parquet</div></div>
+                </div>
+                <p class="h3">特征工程</p>
+                <div class="kpi-row" style="margin-bottom:12px;">
+                    <div class="kpi"><div class="v" style="color:var(--accent);">19</div><div class="l">最终特征</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--green);">99.3%</div><div class="l">空间匹配率</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--blue);">5</div><div class="l">PCA主成分</div></div>
+                </div>
+            </div>
+            <div class="col">
+                <p class="h3">模型性能</p>
+                <div class="kpi-row" style="margin-bottom:12px;">
+                    <div class="kpi"><div class="v" style="color:var(--accent);">0.644</div><div class="l">R² (借车需求)</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--blue);">3.04</div><div class="l">RMSE</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--green);">0.372</div><div class="l">Top特征重要度</div></div>
+                </div>
+                <p class="h3">工程质量</p>
+                <div class="kpi-row" style="margin-bottom:12px;">
+                    <div class="kpi"><div class="v" style="color:var(--green);">23/23</div><div class="l">测试通过</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--accent);">0</div><div class="l">flake8错误</div></div>
+                    <div class="kpi"><div class="v" style="color:var(--blue);">39</div><div class="l">源文件</div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">13 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 13: 回顾 — 每阶段做了什么 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">RECAP</span>
+        <div class="sb-title" style="font-size:38px;">七阶段<br>回顾</div>
+        <span class="sb-sub" style="margin-top:30px;">What We Built</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">七阶段回顾：每个阶段做了什么</h2>
+        <div class="row" style="margin-top:10px;">
+            <div class="col">
+                <div class="card" style="margin-bottom:8px;padding:14px 20px;">
+                    <p style="font-size:17px;line-height:1.7;"><b style="color:var(--accent);">1 环境+数据</b> — venv · JDK 17 · PySpark · 下载 CitiBike 5个月 CSV + GBFS + 天气</p>
+                </div>
+                <div class="card" style="margin-bottom:8px;padding:14px 20px;">
+                    <p style="font-size:17px;line-height:1.7;"><b style="color:var(--accent);">2 数据管道</b> — Medallion 四层 Parquet（Raw→Bronze→Silver→Gold）。1450万 → 438万条</p>
+                </div>
+                <div class="card" style="margin-bottom:8px;padding:14px 20px;">
+                    <p style="font-size:17px;line-height:1.7;"><b style="color:var(--accent);">3 特征工程</b> — 空间匹配(99.3%) + 业务特征(3个) + 天气(3个) = 19特征。PCA降维</p>
+                </div>
+                <div class="card" style="margin-bottom:8px;padding:14px 20px;">
+                    <p style="font-size:17px;line-height:1.7;"><b style="color:var(--accent);">4 模型训练</b> — Random Forest · R² 0.14→0.64 · Hyperopt 贝叶斯优化 8轮</p>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="margin-bottom:8px;padding:14px 20px;border-left:3px solid var(--accent);">
+                    <p style="font-size:17px;line-height:1.7;"><b style="color:var(--accent);">5 定价策略 ⭐</b> — 2×2供需矩阵 · 四场景定价 · 预测+规则解耦 · 438万条全量分析</p>
+                </div>
+                <div class="card" style="margin-bottom:8px;padding:14px 20px;">
+                    <p style="font-size:17px;line-height:1.7;"><b style="color:var(--accent);">6 API+看板</b> — FastAPI 三个接口 · PyEcharts 六个图表 · Swagger UI</p>
+                </div>
+                <div class="card" style="margin-bottom:8px;padding:14px 20px;">
+                    <p style="font-size:17px;line-height:1.7;"><b style="color:var(--accent);">7 测试+交付</b> — 23 tests · flake8 0 · CI/CD · Word报告 · HTML答辩</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="slide-num">14 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 14: 项目收获 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">TAKEAWAYS</span>
+        <div class="sb-title" style="font-size:38px;">项目<br>收获</div>
+        <span class="sb-sub" style="margin-top:30px;">Skills + Career</span>
+    </div>
+    <div class="main-content reveal">
+        <h2 class="h2">项目收获</h2>
+        <div class="row" style="margin-top:16px;">
+            <div class="col">
+                <div class="card" style="margin-bottom:12px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:8px;">技术能力</p>
+                    <ul class="bullet-list" style="font-size:17px;">
+                        <li>PySpark 分布式计算 + Medallion 架构</li>
+                        <li>MLOps 全链路：数据→模型→API→CI/CD</li>
+                        <li>Hyperopt 贝叶斯优化替代网格搜索</li>
+                        <li>空间数据分析 + 可解释定价设计</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="margin-bottom:12px;">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:8px;">商业思维</p>
+                    <ul class="bullet-list" style="font-size:17px;">
+                        <li>数据→预测→决策 转化能力</li>
+                        <li>"预测+规则"解耦架构的泛化应用</li>
+                        <li>数据产品化的完整意识</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col">
+                <div class="card" style="border:2px solid var(--accent-border);background:var(--accent-bg);">
+                    <p style="color:var(--accent);font-weight:700;font-size:20px;margin-bottom:8px;">职业方向</p>
+                    <ul class="bullet-list" style="font-size:17px;">
+                        <li>数据分析师 / 商业分析师</li>
+                        <li>数据产品经理 / AI产品经理</li>
+                        <li>大数据应用与数据运营</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="card reveal" style="text-align:center;margin-top:12px;background:var(--accent-bg);border-color:var(--accent-border);">
+            <p style="font-size:22px;color:var(--accent);font-weight:600;">核心认知：商业分析师的价值 = 数据 → 决策建议 → 可用的产品</p>
+        </div>
+    </div>
+    <div class="slide-num">15 / 16</div>
+</section>
+
+<!-- ==================== SLIDE 15: 致谢 ==================== -->
+<section class="slide">
+    <div class="sidebar" style="justify-content:flex-start;padding-top:100px;">
+        <span class="sb-accent">THANK YOU</span>
+        <div class="sb-title" style="font-size:38px;">感谢<br>聆听</div>
+        <span class="sb-sub" style="margin-top:30px;">Topic 2 · 2026</span>
+    </div>
+    <div class="main-content reveal" style="justify-content:center;">
+        <h1 style="font-size:58px;font-weight:900;color:var(--t1);margin-bottom:16px;font-family:var(--font-display);">感谢聆听</h1>
+        <div style="width:60px;height:3px;background:var(--accent);border-radius:2px;margin-bottom:28px;"></div>
+        <div class="card" style="margin-bottom:20px;max-width:600px;">
+            <p style="font-size:18px;color:var(--t2);line-height:1.8;">
+                演示地址：<b style="color:var(--accent);">http://localhost:8000/docs</b><br>
+                看板大屏：<b style="color:var(--accent);">http://localhost:8000/dashboard</b><br>
+                项目代码：<b style="color:var(--t2);">bike-pricing-analysis/</b>
+            </p>
+        </div>
+        <div class="kpi-row" style="margin-bottom:20px;">
+            <div class="kpi"><div class="v" style="color:var(--accent);">39</div><div class="l">源文件</div></div>
+            <div class="kpi"><div class="v" style="color:var(--blue);">23</div><div class="l">测试用例</div></div>
+            <div class="kpi"><div class="v" style="color:var(--green);">0.644</div><div class="l">R²</div></div>
+            <div class="kpi"><div class="v" style="color:var(--accent);">1.3GB</div><div class="l">数据量</div></div>
+        </div>
+        <p style="font-size:16px;color:var(--t3);">大数据管理与应用 · 2026年6月 · 感谢老师的指导与聆听</p>
+    </div>
+    <div class="slide-num">16 / 16</div>
+</section>
+
+</main></div>
+
+<div class="deck-controls">
+    <button onclick="pres.prev()">&#9664;</button>
+    <span class="page-ind" id="pi">1 / 15</span>
+    <button onclick="pres.next()">&#9654;</button>
+</div>
+
+<script>
+class SlidePresentation{
+    constructor(){
+        this.slides=document.querySelectorAll('.slide');this.current=0;this.stage=document.getElementById('stage');
+        this.pi=document.getElementById('pi');this.total=this.slides.length;this.setupKeys();this.setupTouch();this.show(0);
+    }
+    setupKeys(){
+        document.addEventListener('keydown',e=>{
+            if(e.key==='ArrowRight'||e.key==='ArrowDown'||e.key===' '){e.preventDefault();this.next();}
+            else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){e.preventDefault();this.prev();}
+            else if(e.key==='Home'){e.preventDefault();this.show(0);}
+            else if(e.key==='End'){e.preventDefault();this.show(this.total-1);}
+        });
+    }
+    setupTouch(){
+        let sx=0;document.addEventListener('touchstart',e=>{sx=e.touches[0].clientX;});
+        document.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-sx;if(Math.abs(d)>50)d>0?this.prev():this.next();});
+    }
+    show(i){this.current=Math.max(0,Math.min(i,this.total-1));this.slides.forEach((s,j)=>{s.classList.toggle('active',j===this.current);s.classList.toggle('visible',j===this.current);});this.pi.textContent=`${this.current+1} / ${this.total}`;}
+    next(){this.show(this.current+1);}
+    prev(){this.show(this.current-1);}
+}
+const pres=new SlidePresentation();
+</script>
+</body>
+</html>

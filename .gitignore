@@ -58,6 +58,8 @@ unpacked_report/
 *.log
 *.zip
 *.docx
+!reports/
+!reports/*.docx
 data/*.zip
 data/processed/*.csv
 答辩演示*.html

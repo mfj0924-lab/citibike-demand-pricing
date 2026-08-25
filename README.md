@@ -61,15 +61,36 @@ python -m pytest
 
 # 启动API服务
 python -m uvicorn src.api.main:app --reload
-# 然后访问 http://localhost:8000/docs
+# 然后访问 API 文档、交互演示或分析大屏
+# http://localhost:8000/docs
+# http://localhost:8000/demo
+# http://localhost:8000/dashboard
 ```
+
+## API 与成果展示
+
+| 内容 | 入口 | 作用 |
+|---|---|---|
+| 交互式分析大屏 | [`dashboard.html`](dashboard.html) | 无需启动服务即可查看 6 类分析图表 |
+| 课程答辩展示 | [`showcase/presentation.html`](showcase/presentation.html) | 快速了解问题、数据管道、模型、定价策略和结果 |
+| 完整项目报告 | [`reports/citibike_project_report.docx`](reports/citibike_project_report.docx) | 保留数据来源、建模过程、结果与边界 |
+| FastAPI 文档 | `http://localhost:8000/docs` | 查看和试调用接口 |
+
+服务启动后提供三个核心接口：
+
+- `POST /api/v1/predict`：输入站点、时间和当前库存，返回需求预测与定价建议。
+- `POST /api/v1/station/{station_id}/forecast`：返回指定站点未来 24 小时逐时预测。
+- `GET /api/v1/hotspots`：返回当前建议涨价或降价的热点站点。
+
+报告中的本机环境命令属于课程实施记录；公开仓库统一使用上面的可移植启动命令。
 
 ## 数据来源
 - CitiBike 官方骑行数据：https://citibikenyc.com/system-data
 - GBFS 站点信息：https://gbfs.citibikenyc.com/gbfs/en/station_information.json
+- Open-Meteo 历史天气 API：https://open-meteo.com/
 
-仓库只提供代码、测试、说明和轻量展示资源。原始 ZIP、Parquet 中间层、训练模型、
-课程报告和第三方参考项目均不上传；使用者需从官方来源自行获取数据。
+仓库提供代码、测试、说明、轻量展示资源和脱敏后的课程报告。原始 ZIP、Parquet
+中间层、训练模型和第三方参考项目不上传；使用者需从官方来源自行获取数据。
 
 ## 结果边界
 
